@@ -1,0 +1,9 @@
+#!/bin/bash
+keys="$1"
+SLOWTYPEWAIT="${SLOWTYPEWAIT:-1}"
+while [[ "$keys" != "" ]]; do
+  sleep "$SLOWTYPEWAIT"
+  key=$(echo "$keys" | head -c 1)
+  keys=$(echo "$keys" | tail -c +2)
+  echo -n "$key"
+done

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+FILE=$(mktemp)
+tac $1 > $FILE
+cat $FILE > $1
+rm $FILE
