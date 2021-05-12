@@ -23,11 +23,11 @@ echo "Hi."
 # will, though. So let's get started.
 echo "Terms"
 # First, a quick recap of Git-related terms.§
-# tree: set of files (filenames, perms, pointers to subtrees/file blobs)§
+# tree: set of files (filenames, perms, pointers to subtrees/file blobs, NOT timedates)§
 # commit: metadata (time, author, pointer to tree, possibly pointer to parent commit(s))§
 # HEAD: last commit hash/parent of next commit (local only, modified by, e.g., git checkout)§
-# index/staging/cache: HEAD plus "changes to be committed" (local only, modified by, e.g., git add/reset)§
-# working directory/WIP: index plus "changes not added for commit" (local only, modified by, e.g., git checkout/reset --hard)§
+# index/staging/cache: HEAD plus "changes to be committed" (local only, modified by, e.g., git add/reset, stored in .git)§
+# working directory/WIP: index plus "changes not added for commit" (plain files, local only, modified by, e.g., git checkout/reset --hard)§
 # §
 # Ok? Then let's init a Git repository... and have a look at the
 # files in the .git/ folder.
@@ -695,11 +695,6 @@ git log --pretty=oneline
 # For more information on git rerere, see§
 # https://git-scm.com/docs/git-rerere§
 # https://git-scm.com/book/en/v2/Git-Tools-Rerere§
-% Goodies: Git stash save/pop
-echo "unfinished"
-% Goodies: Git worktree
-echo "unfinished"
-# vim -s ../addstuff.vim README
 % Thanks
 echo Thanks go to...
 # Pro Git book https://git-scm.com/book/en/v2§
@@ -707,6 +702,9 @@ echo Thanks go to...
 # Fellow B&Bers for input§
 EOF
 )
+
+which hexdump > /dev/null || { echo "Please install hexdump."; exit 1; }
+which zlib-flate > /dev/null || { echo "Please install zlib-flate (typically bundled with qpdf)."; exit 1; }
 
 rm -rf fakeremote > /dev/null 2>&1
 (

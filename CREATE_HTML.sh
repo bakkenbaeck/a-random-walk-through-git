@@ -6,3 +6,5 @@ cat contents.html >> output.html
 tail -n +3 body.html >> output.html
 rm -f contents.html body.html
 sed -i 's/<ijon/\&lt;ijon/' output.html
+SPWD=$(pwd | sed 's_/_\\/_g')\\/
+sed -i "s/$SPWD//" output.html
