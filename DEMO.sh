@@ -724,8 +724,8 @@ DIDCMD=0
 STEPNO=1
 IFS=$'\n'
 if [[ $OUTPUTHTML == 1 ]]; then
-  echo "<html><head><title>A Random Walk Through Git</title><style>.cmdline { background-color: linen; }"
-  echo ".cmdoutput { background-color: lightgray; }</style></head><body><h2>A Random Walk Through Git</h2>"
+  echo "<html><head><title>A Random Walk Through Git</title><style>.cmdline { background-color: lightgray; margin-top: 36px; } .cmdoutput { background-color: lavender; }</style></head>"
+  echo "<body><h2>A Random Walk Through Git</h2><a href='https://bakkenbaeck.github.io/a-random-walk-through-git'>Website</a> - <a href='https://github.com/bakkenbaeck/a-random-walk-through-git'>on GitHub</a>"
 fi
 
 for line in $SCRIPT; do

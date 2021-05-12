@@ -1,0 +1,2938 @@
+<html><head><title>A Random Walk Through Git</title><style>.cmdline { background-color: lightgray; margin-top: 36px; } .cmdoutput { background-color: lavender; }</style></head>
+<body><h2>A Random Walk Through Git</h2><a href='http://bakkenbaeck.github.io/a-random-walk-through-git'>Website</a> - <a href='https://github.com/bakkenbaeck/a-random-walk-through-git'>on GitHub</a>
+<ul>
+<li><a href="#headline1">Preface</a></li>
+<li><a href="#headline3">.git/ files</a></li>
+<li><a href="#headline12">Commit hash in detail</a></li>
+<li><a href="#headline35">Committing using plumbing commands</a></li>
+<li><a href="#headline46">Packfiles</a></li>
+<li><a href="#headline56">git checkout and detached HEAD</a></li>
+<li><a href="#headline61">git reflog</a></li>
+<li><a href="#headline62">The resets of Git</a></li>
+<li><a href="#headline66">Working with remote repositories</a></li>
+<li><a href="#headline89">Committing, pushing, merging, rebasing</a></li>
+<li><a href="#headline97">Merge vs. rebase/cherry pick</a></li>
+<li><a href="#headline99">rebase --interactive</a></li>
+<li><a href="#headline107">Working with branches with differing trees</a></li>
+<li><a href="#headline116">Goodies: --patch</a></li>
+<li><a href="#headline122">Goodies: Git bisect</a></li>
+<li><a href="#headline127">Goodies: Git rerere</a></li>
+<li><a href="#headline145">Thanks</a></li>
+</ul>
+<h3 class="headline" id="headline1">Preface</h3>
+
+<pre class="cmdline" id="step1">1# echo "Hi."</pre>
+<pre class="cmdoutput">
+Hi.
+</pre>
+
+<p class="cmdcomment">
+This tutorial is an in-depth look at how Git works, performing
+
+a lot of sometimes unusual steps to walk through interesting
+
+details. You will have to pay attention closely, or you will
+
+get lost on the way. But do not despair; you can run this
+
+tutorial on your computer, at the speed you want, skip to
+
+any step you want, and investigate the state of things in
+
+another terminal window at all times.<br>
+
+<br>
+
+In fact, you are looking at an HTML file generated from the output of that tutorial. (that's why there is that "echo Hi" thing above: the hack that the tutorial script is only allows comments after commands. :) )<br>
+
+<br>
+
+The code of the tutorial is here: github.com/bakkenbaeck/a-random-walk-through-git - clone it and run it on your machine!<br>
+
+<br>
+
+This tutorial is NOT for absolute beginners, nor is it a
+
+collection of "cooking recipies". Recipies will not help you
+
+understanding the broad picture, nor will they get you out
+
+of tricky situations.<br>
+
+Some deeper understanding by experimentation and investigation
+
+will, though. So let's get started.
+
+</p>
+<pre class="cmdline" id="step2">2# echo "Terms"</pre>
+<pre class="cmdoutput">
+Terms
+</pre>
+
+<p class="cmdcomment">
+First, a quick recap of Git-related terms.<br>
+
+tree: set of files (filenames, perms, pointers to subtrees/file blobs, NOT timedates)<br>
+
+commit: metadata (time, author, pointer to tree, possibly pointer to parent commit(s))<br>
+
+HEAD: last commit hash/parent of next commit (local only, modified by, e.g., git checkout)<br>
+
+index/staging/cache: HEAD plus "changes to be committed" (local only, modified by, e.g., git add/reset, stored in .git)<br>
+
+working directory/WIP: index plus "changes not added for commit" (plain files, local only, modified by, e.g., git checkout/reset --hard)<br>
+
+<br>
+
+Ok? Then let's init a Git repository... and have a look at the
+
+files in the .git/ folder.
+</p>
+<h3 class="headline" id="headline3">.git/ files</h3>
+
+<pre class="cmdline" id="step3">3# git init . && git config --local user.name "Ijon Tichy" && git config --local user.email "ijon@beteigeuze.space" && rm -rf .git/hooks/ && find .git -type f</pre>
+<pre class="cmdoutput">
+Initialized empty Git repository in example/.git/
+.git/info/exclude
+.git/config
+.git/description
+.git/HEAD
+</pre>
+
+<p class="cmdcomment">
+Then, let's commit a README.
+
+</p>
+<pre class="cmdline" id="step4">4# echo "This is not a README yet" > README && git add README && git commit -m "first commit"</pre>
+<pre class="cmdoutput">
+[master (root-commit) 4033e22] first commit
+ 1 file changed, 1 insertion(+)
+ create mode 100644 README
+</pre>
+
+<p class="cmdcomment">
+What files were created by the commit in the .git/ folder?
+
+</p>
+<pre class="cmdline" id="step5">5# find . -type f</pre>
+<pre class="cmdoutput">
+./README
+./.git/info/exclude
+./.git/refs/heads/master
+./.git/logs/refs/heads/master
+./.git/logs/HEAD
+./.git/config
+./.git/description
+./.git/HEAD
+./.git/index
+./.git/COMMIT_EDITMSG
+./.git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59
+./.git/objects/40/33e22db3df6e826be2ba43f5db16ced4e3bc18
+./.git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59
+</pre>
+
+<p class="cmdcomment">
+Now there are three objects: commit, tree, blob (file).
+
+What file type do the Git object files use?
+
+</p>
+<pre class="cmdline" id="step6">6# file .git/objects/*/*</pre>
+<pre class="cmdoutput">
+.git/objects/40/33e22db3df6e826be2ba43f5db16ced4e3bc18: zlib compressed data
+.git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59: zlib compressed data
+.git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59: zlib compressed data
+</pre>
+
+<p class="cmdcomment">
+All internal blobs get compressed. Saves space and keeps grep clean. Yay!<br>
+
+More details on these files later.
+
+</p>
+<pre class="cmdline" id="step7">7# cat .git/refs/heads/master</pre>
+<pre class="cmdoutput">
+4033e22db3df6e826be2ba43f5db16ced4e3bc18
+</pre>
+
+<p class="cmdcomment">
+This is the hash of HEAD of the master branch.
+
+</p>
+<pre class="cmdline" id="step8">8# cat .git/HEAD</pre>
+<pre class="cmdoutput">
+ref: refs/heads/master
+</pre>
+
+<p class="cmdcomment">
+This is a pointer to current HEAD (or a hash when in "detached HEAD" state).
+
+</p>
+<pre class="cmdline" id="step9">9# cat .git/logs/refs/heads/master</pre>
+<pre class="cmdoutput">
+0000000000000000000000000000000000000000 4033e22db3df6e826be2ba43f5db16ced4e3bc18 Ijon Tichy &lt;ijon@beteigeuze.space> 1620831873 +0200	commit (initial): first commit
+</pre>
+
+<p class="cmdcomment">
+This is the reflog of master HEAD (cf. git reflog).<br>
+
+It is not part of repo but for local convenience only.<br>
+
+We'll look at it later.
+
+</p>
+<pre class="cmdline" id="step10">10# file .git/index</pre>
+<pre class="cmdoutput">
+.git/index: Git index, version 2, 1 entries
+</pre>
+
+<p class="cmdcomment">
+That's the file Git uses to keep track of the current index (local only).
+
+It is basically an uncommitted commit, or rather the 'tree' part of that.
+
+This file is one of the few Git files that is a bit magic, mostly because
+
+of speed optimization considerations: In order for "git status" to be able
+
+to run really fast, some data additional to the data kept in the actual repo
+
+has to be available. This is why .git/index is not just a standard tree
+
+object (which doesn't have the additional metadata).<br>
+
+We will not go into details here. Further reading:<br>
+
+https://github.com/git/git/blob/master/Documentation/technical/index-format.txt<br>
+
+https://mirrors.edge.kernel.org/pub/software/scm/git/docs/technical/racy-git.txt<br>
+
+https://stackoverflow.com/questions/4084921/what-does-the-git-index-contain-exactly<br>
+
+</p>
+<pre class="cmdline" id="step11">11# git log</pre>
+<pre class="cmdoutput">
+commit 4033e22db3df6e826be2ba43f5db16ced4e3bc18
+Author: Ijon Tichy &lt;ijon@beteigeuze.space>
+Date:   Wed May 12 17:04:33 2021 +0200
+
+    first commit
+</pre>
+
+<p class="cmdcomment">
+Note the commit hash. It's basically<br>
+
+sha1sum(commit metadata including pointer to hash of tree)
+</p>
+<h3 class="headline" id="headline12">Commit hash in detail</h3>
+
+<pre class="cmdline" id="step12">12# sleep 1 && git commit --amend -m "first commit"</pre>
+<pre class="cmdoutput">
+[master 6ecf002] first commit
+ Date: Wed May 12 17:04:33 2021 +0200
+ 1 file changed, 1 insertion(+)
+ create mode 100644 README
+</pre>
+
+<p class="cmdcomment">
+We just amended the last commit but didn't actually change anything:
+
+same commit message, author, tree, and time.<br>
+
+But the commit hash has changed. Why?
+
+</p>
+<pre class="cmdline" id="step13">13# git log --pretty=fuller</pre>
+<pre class="cmdoutput">
+commit 6ecf00219d83579a35e3a1daae2615f753c0ec0f
+Author:     Ijon Tichy &lt;ijon@beteigeuze.space>
+AuthorDate: Wed May 12 17:04:33 2021 +0200
+Commit:     Ijon Tichy &lt;ijon@beteigeuze.space>
+CommitDate: Wed May 12 17:04:34 2021 +0200
+
+    first commit
+</pre>
+
+<p class="cmdcomment">
+Because there's more metadata than git log shows by default.
+
+There's an author date and a commit date. Amending a commit
+
+keeps the author date but updates the commit date.<br>
+
+Note that Git has separate author and committer to account
+
+for the traditional Linux email based patch workflow.
+
+Authors would send in patches by mail, maintainers pick up
+
+patches and commit (or reject).
+
+</p>
+<pre class="cmdline" id="step14">14# GIT_COMMITTER_DATE="Jan 1 12:00 2000 +0000" git commit --amend --date="Jan 1 12:00 2000 +0000" -m "first commit"</pre>
+<pre class="cmdoutput">
+[master c8d9b9c] first commit
+ Date: Sat Jan 1 12:00:00 2000 +0000
+ 1 file changed, 1 insertion(+)
+ create mode 100644 README
+</pre>
+
+<p class="cmdcomment">
+rewrite last commit with fixed times (--date sets author date)
+
+</p>
+<pre class="cmdline" id="step15">15# GIT_COMMITTER_DATE="Jan 1 12:00 2000 +0000" git commit --amend --date="Jan 1 12:00 2000 +0000" -m "first commit"</pre>
+<pre class="cmdoutput">
+[master c8d9b9c] first commit
+ Date: Sat Jan 1 12:00:00 2000 +0000
+ 1 file changed, 1 insertion(+)
+ create mode 100644 README
+</pre>
+
+<p class="cmdcomment">
+THAT works: commit hash stays the same.
+
+</p>
+<pre class="cmdline" id="step16">16# git log --pretty=fuller</pre>
+<pre class="cmdoutput">
+commit c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48
+Author:     Ijon Tichy &lt;ijon@beteigeuze.space>
+AuthorDate: Sat Jan 1 12:00:00 2000 +0000
+Commit:     Ijon Tichy &lt;ijon@beteigeuze.space>
+CommitDate: Sat Jan 1 12:00:00 2000 +0000
+
+    first commit
+</pre>
+
+<pre class="cmdline" id="step17">17# export GIT_COMMITTER_DATE="Jan 1 12:00 2000 +0000" && export GIT_AUTHOR_DATE="Jan 1 12:00 2000 +0000"</pre>
+<pre class="cmdoutput">
+</pre>
+
+<p class="cmdcomment">
+Let us fix dates so that we have deterministic hashes.<br>
+
+For the purposes if this demo only; don't do this at home.
+
+</p>
+<pre class="cmdline" id="step18">18# file .git/objects/*/*</pre>
+<pre class="cmdoutput">
+.git/objects/40/33e22db3df6e826be2ba43f5db16ced4e3bc18: zlib compressed data
+.git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59: zlib compressed data
+.git/objects/6e/cf00219d83579a35e3a1daae2615f753c0ec0f: zlib compressed data
+.git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59: zlib compressed data
+.git/objects/c8/d9b9c01eea11fb1032903b0dd2bea3eeb46f48: zlib compressed data
+</pre>
+
+<p class="cmdcomment">
+That's one tree (we didn't change files so far), one file, three commits (original, hash test, fixed time).
+
+</p>
+<pre class="cmdline" id="step19">19# git branch test</pre>
+<pre class="cmdoutput">
+</pre>
+
+<pre class="cmdline" id="step20">20# file .git/objects/*/*</pre>
+<pre class="cmdoutput">
+.git/objects/40/33e22db3df6e826be2ba43f5db16ced4e3bc18: zlib compressed data
+.git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59: zlib compressed data
+.git/objects/6e/cf00219d83579a35e3a1daae2615f753c0ec0f: zlib compressed data
+.git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59: zlib compressed data
+.git/objects/c8/d9b9c01eea11fb1032903b0dd2bea3eeb46f48: zlib compressed data
+</pre>
+
+<p class="cmdcomment">
+Just creating a new branch doesn't create any new trees or commits or blobs.
+
+</p>
+<pre class="cmdline" id="step21">21# cat .git/HEAD</pre>
+<pre class="cmdoutput">
+ref: refs/heads/master
+</pre>
+
+<p class="cmdcomment">
+Right, we're still on master.
+
+</p>
+<pre class="cmdline" id="step22">22# git checkout test</pre>
+<pre class="cmdoutput">
+Switched to branch 'test'
+</pre>
+
+<pre class="cmdline" id="step23">23# cat .git/HEAD</pre>
+<pre class="cmdoutput">
+ref: refs/heads/test
+</pre>
+
+<pre class="cmdline" id="step24">24# cat .git/refs/heads/test</pre>
+<pre class="cmdoutput">
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48
+</pre>
+
+<p class="cmdcomment">
+note that file is all that Git needs to handle (local) branches
+
+</p>
+<pre class="cmdline" id="step25">25# file .git/objects/c8/d9b9c01eea11fb1032903b0dd2bea3eeb46f48</pre>
+<pre class="cmdoutput">
+.git/objects/c8/d9b9c01eea11fb1032903b0dd2bea3eeb46f48: zlib compressed data
+</pre>
+
+<p class="cmdcomment">
+we have an object with that commit hash, let's have a look
+
+</p>
+<pre class="cmdline" id="step26">26# git cat-file -t c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48</pre>
+<pre class="cmdoutput">
+commit
+</pre>
+
+<p class="cmdcomment">
+cat-file is low level Git ('plumbing'); -t prints the object type...
+
+</p>
+<pre class="cmdline" id="step27">27# git cat-file -p c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48</pre>
+<pre class="cmdoutput">
+tree b35c99875f5758f64e9348c05dac14848a046f59
+author Ijon Tichy &lt;ijon@beteigeuze.space> 946728000 +0000
+committer Ijon Tichy &lt;ijon@beteigeuze.space> 946728000 +0000
+
+first commit
+</pre>
+
+<p class="cmdcomment">
+...and -p pretty prints that object's content.
+
+Let's look at the referenced tree.
+
+</p>
+<pre class="cmdline" id="step28">28# git cat-file -t b35c99875f5758f64e9348c05dac14848a046f59</pre>
+<pre class="cmdoutput">
+tree
+</pre>
+
+<p class="cmdcomment">
+well that was obvious
+
+</p>
+<pre class="cmdline" id="step29">29# git cat-file -p b35c99875f5758f64e9348c05dac14848a046f59</pre>
+<pre class="cmdoutput">
+100644 blob 5b6c6cb672dc1c3e3f38da4cc819c07da510fb59	README
+</pre>
+
+<p class="cmdcomment">
+Note file metadata (file mode bits, filename) is found in the tree's data.
+
+There's no file date: git checkout etc. always writes with current date as many
+
+tools (GNU make etc.) rely on file dates for their operation, e.g., make
+
+only rebuilds artifacts if the artifact filedate is older than the source
+
+file date - so checking out older project versions (with 'correct' old file
+
+dates) would not trigger rebuilds.<br>
+
+Let's look at the referenced blob.
+
+</p>
+<pre class="cmdline" id="step30">30# git cat-file -t 5b6c6cb672dc1c3e3f38da4cc819c07da510fb59</pre>
+<pre class="cmdoutput">
+blob
+</pre>
+
+<pre class="cmdline" id="step31">31# git cat-file -p 5b6c6cb672dc1c3e3f38da4cc819c07da510fb59</pre>
+<pre class="cmdoutput">
+This is not a README yet
+</pre>
+
+<p class="cmdcomment">
+But how much magic does cat-file do?
+
+</p>
+<pre class="cmdline" id="step32">32# zlib-flate -uncompress &lt; .git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59 | hexdump -C</pre>
+<pre class="cmdoutput">
+00000000  62 6c 6f 62 20 32 35 00  54 68 69 73 20 69 73 20  |blob 25.This is |
+00000010  6e 6f 74 20 61 20 52 45  41 44 4d 45 20 79 65 74  |not a README yet|
+00000020  0a                                                |.|
+00000021
+</pre>
+
+<p class="cmdcomment">
+It really is just zlib compressed type+length header, null byte, data.
+
+No magic!
+
+</p>
+<pre class="cmdline" id="step33">33# zlib-flate -uncompress &lt; .git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59 | sha1sum</pre>
+<pre class="cmdoutput">
+5b6c6cb672dc1c3e3f38da4cc819c07da510fb59  -
+</pre>
+
+<p class="cmdcomment">
+...and the object filename really is just its hash.
+
+</p>
+<pre class="cmdline" id="step34">34# zlib-flate -uncompress &lt; .git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59 | hexdump -C</pre>
+<pre class="cmdoutput">
+00000000  74 72 65 65 20 33 34 00  31 30 30 36 34 34 20 52  |tree 34.100644 R|
+00000010  45 41 44 4d 45 00 5b 6c  6c b6 72 dc 1c 3e 3f 38  |EADME.[ll.r..>?8|
+00000020  da 4c c8 19 c0 7d a5 10  fb 59                    |.L...}...Y|
+0000002a
+</pre>
+
+<p class="cmdcomment">
+Same for the tree object. The 'garbage' in the ASCII representation is actually
+
+the README's blob hash in binary.
+</p>
+<h3 class="headline" id="headline35">Committing using plumbing commands</h3>
+
+<pre class="cmdline" id="step35">35# echo "The hard way" > test.txt</pre>
+<pre class="cmdoutput">
+</pre>
+
+<p class="cmdcomment">
+Let's create a commit that adds this new file just using Git plumbing commands
+
+(git add etc. are 'porcelain').
+
+</p>
+<pre class="cmdline" id="step36">36# git hash-object -w test.txt</pre>
+<pre class="cmdoutput">
+3b85187168e709784298f3f62ea2aed5f496e5eb
+</pre>
+
+<p class="cmdcomment">
+hash-object calculates the hash of the file (and, with -w, adds it to Git objects).<br>
+
+So we have the blob, but no corresponding tree or commit yet. Actually, that file
+
+is not even staged...
+
+</p>
+<pre class="cmdline" id="step37">37# git update-index --add --cacheinfo 100644 3b85187168e709784298f3f62ea2aed5f496e5eb test.txt</pre>
+<pre class="cmdoutput">
+</pre>
+
+<p class="cmdcomment">
+hash-object and update-index are the plumbing of git add.
+
+The 'cacheinfo' parameter contains file permissions.
+
+</p>
+<pre class="cmdline" id="step38">38# git ls-files --stage</pre>
+<pre class="cmdoutput">
+100644 5b6c6cb672dc1c3e3f38da4cc819c07da510fb59 0	README
+100644 3b85187168e709784298f3f62ea2aed5f496e5eb 0	test.txt
+</pre>
+
+<p class="cmdcomment">
+This is the content of the .git/index file.
+
+</p>
+<pre class="cmdline" id="step39">39# git status</pre>
+<pre class="cmdoutput">
+On branch test
+Changes to be committed:
+  (use "git restore --staged &lt;file>..." to unstage)
+	new file:   test.txt
+
+</pre>
+
+<p class="cmdcomment">
+It worked! test.txt is a "new file".
+
+However, we still have no dedicated tree object yet - it's still all in the index.
+
+</p>
+<pre class="cmdline" id="step40">40# git write-tree</pre>
+<pre class="cmdoutput">
+9240cdb2b8598f50cb8b66328b5c31d077d14470
+</pre>
+
+<p class="cmdcomment">
+This took the index and created a tree object from it.
+
+We still need the commit object.
+
+</p>
+<pre class="cmdline" id="step41">41# echo "a commit, done the hard way" | git commit-tree 9240cdb2b8598f50cb8b66328b5c31d077d14470 -p c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48</pre>
+<pre class="cmdoutput">
+5350fa43e7e3a6263c85e47d24b3351f84be9a22
+</pre>
+
+<p class="cmdcomment">
+We have to reference the parent here.
+
+</p>
+<pre class="cmdline" id="step42">42# git cat-file -p 5350fa43e7e3a6263c85e47d24b3351f84be9a22</pre>
+<pre class="cmdoutput">
+tree 9240cdb2b8598f50cb8b66328b5c31d077d14470
+parent c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48
+author Ijon Tichy &lt;ijon@beteigeuze.space> 946728000 +0000
+committer Ijon Tichy &lt;ijon@beteigeuze.space> 946728000 +0000
+
+a commit, done the hard way
+</pre>
+
+<p class="cmdcomment">
+Looks fine!
+
+</p>
+<pre class="cmdline" id="step43">43# git log</pre>
+<pre class="cmdoutput">
+commit c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48
+Author: Ijon Tichy &lt;ijon@beteigeuze.space>
+Date:   Sat Jan 1 12:00:00 2000 +0000
+
+    first commit
+</pre>
+
+<p class="cmdcomment">
+...but the new commit doesn't show up in the log yet since our HEAD
+
+is still the previous commit, and .git/refs/heads/master still needs
+
+to get updated.
+
+</p>
+<pre class="cmdline" id="step44">44# echo 5350fa43e7e3a6263c85e47d24b3351f84be9a22 > .git/refs/heads/test</pre>
+<pre class="cmdoutput">
+</pre>
+
+<pre class="cmdline" id="step45">45# git log --format=fuller</pre>
+<pre class="cmdoutput">
+commit 5350fa43e7e3a6263c85e47d24b3351f84be9a22
+Author:     Ijon Tichy &lt;ijon@beteigeuze.space>
+AuthorDate: Sat Jan 1 12:00:00 2000 +0000
+Commit:     Ijon Tichy &lt;ijon@beteigeuze.space>
+CommitDate: Sat Jan 1 12:00:00 2000 +0000
+
+    a commit, done the hard way
+
+commit c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48
+Author:     Ijon Tichy &lt;ijon@beteigeuze.space>
+AuthorDate: Sat Jan 1 12:00:00 2000 +0000
+Commit:     Ijon Tichy &lt;ijon@beteigeuze.space>
+CommitDate: Sat Jan 1 12:00:00 2000 +0000
+
+    first commit
+</pre>
+
+<p class="cmdcomment">
+Great! This concludes a 'manual' commit using Git plumbing commands.<br>
+
+You can see that going full manual, i.e., creating the files
+
+needed to represent a commit in the .git/objects directory just
+
+using echo etc., would not be a big problem either.<br>
+
+<br>
+
+But isn't what we saw so far horribly inefficient once it comes to
+
+file changes? No diffs are saved ever, and each file version gets
+
+compressed to a new object file?<br>
+
+<br>
+
+That's right, but there's another layer of object storage in Git
+
+called 'packfiles'.<br>
+
+Let's create a new empty branch for testing that.
+</p>
+<h3 class="headline" id="headline46">Packfiles</h3>
+
+<pre class="cmdline" id="step46">46# git checkout --orphan packfile_demo && git rm --cached -r . && rm *</pre>
+<pre class="cmdoutput">
+Switched to a new branch 'packfile_demo'
+rm 'README'
+rm 'test.txt'
+</pre>
+
+<p class="cmdcomment">
+Then, let's create a large file.
+
+</p>
+<pre class="cmdline" id="step47">47# for i in {1..10000}; do echo $i >> largefile.txt; done && tail -v largefile.txt && git add largefile.txt && git commit -m "a large file"</pre>
+<pre class="cmdoutput">
+==> largefile.txt &lt;==
+9991
+9992
+9993
+9994
+9995
+9996
+9997
+9998
+9999
+10000
+[packfile_demo (root-commit) cec918b] a large file
+ 1 file changed, 10000 insertions(+)
+ create mode 100644 largefile.txt
+</pre>
+
+<p class="cmdcomment">
+There's our large file (10000 numbered lines).
+
+</p>
+<pre class="cmdline" id="step48">48# find .git/objects -type f && du -h --max-depth=0 .git/objects</pre>
+<pre class="cmdoutput">
+.git/objects/c8/d9b9c01eea11fb1032903b0dd2bea3eeb46f48
+.git/objects/53/50fa43e7e3a6263c85e47d24b3351f84be9a22
+.git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59
+.git/objects/98/12045fd898ce41f5a4019dc2c1e4fff5884566
+.git/objects/ce/c918bfb2ed2e03c8add9c9b2f6529cae1216e5
+.git/objects/92/40cdb2b8598f50cb8b66328b5c31d077d14470
+.git/objects/6e/cf00219d83579a35e3a1daae2615f753c0ec0f
+.git/objects/40/33e22db3df6e826be2ba43f5db16ced4e3bc18
+.git/objects/3b/85187168e709784298f3f62ea2aed5f496e5eb
+.git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59
+.git/objects/55/33519bed1c0129ebd0909a43686f9b735d0e29
+116K	.git/objects
+</pre>
+
+<p class="cmdcomment">
+Note we have just a handful of files in the objects Git directory
+
+that take up little space.<br>
+
+Let's add stuff to the one large file and commit the change;
+
+repeat that a hundred times.
+
+</p>
+<pre class="cmdline" id="step49">49# { for i in {1..100}; do echo "Adding more... $i" >> largefile.txt; git commit -m "adding to largefile.txt, $i" largefile.txt; done } | tail --l 15</pre>
+<pre class="cmdoutput">
+ 1 file changed, 1 insertion(+)
+[packfile_demo a5cd302] adding to largefile.txt, 94
+ 1 file changed, 1 insertion(+)
+[packfile_demo 04265c8] adding to largefile.txt, 95
+ 1 file changed, 1 insertion(+)
+[packfile_demo 2cb1a0d] adding to largefile.txt, 96
+ 1 file changed, 1 insertion(+)
+[packfile_demo c80d763] adding to largefile.txt, 97
+ 1 file changed, 1 insertion(+)
+[packfile_demo 245005d] adding to largefile.txt, 98
+ 1 file changed, 1 insertion(+)
+[packfile_demo e9fa7d0] adding to largefile.txt, 99
+ 1 file changed, 1 insertion(+)
+[packfile_demo ddd7a4e] adding to largefile.txt, 100
+ 1 file changed, 1 insertion(+)
+</pre>
+
+<p class="cmdcomment">
+Now, let's have a look at the Git internal objects.
+
+</p>
+<pre class="cmdline" id="step50">50# echo -n "Number of files in objects dir: " && find .git/objects -type f | wc -l && du -h --max-depth=0 .git/objects</pre>
+<pre class="cmdoutput">
+Number of files in objects dir: 311
+3,6M	.git/objects
+</pre>
+
+<p class="cmdcomment">
+That storage ballooned quite a bit.<br>
+
+Modifying and committing one file 100 times resulted in
+
+100*3 (commit, tree, blob) files, and we have 100
+
+near-identical (compressed) copies of the large file
+
+in object storage now.
+
+</p>
+<pre class="cmdline" id="step51">51# git gc</pre>
+<pre class="cmdoutput">
+</pre>
+
+<p class="cmdcomment">
+garbage collection (which is a bit of a misnomer as it includes
+
+repacking) takes the individual object files and repacks
+
+them into packfiles, storing only differences for object files
+
+that are similar.
+
+</p>
+<pre class="cmdline" id="step52">52# find .git/objects -type f && du -h --max-depth=0 .git/objects</pre>
+<pre class="cmdoutput">
+.git/objects/info/commit-graph
+.git/objects/info/packs
+.git/objects/pack/pack-62c19e5f4b4a5a419028bb04ca4b36cd6ee10a63.idx
+.git/objects/pack/pack-62c19e5f4b4a5a419028bb04ca4b36cd6ee10a63.pack
+148K	.git/objects
+</pre>
+
+<p class="cmdcomment">
+The objects directory is much smaller again.
+
+</p>
+<pre class="cmdline" id="step53">53# find .git/refs -type f</pre>
+<pre class="cmdoutput">
+</pre>
+
+<p class="cmdcomment">
+But where did our branch references go?
+
+</p>
+<pre class="cmdline" id="step54">54# cat .git/packed-refs</pre>
+<pre class="cmdoutput">
+# pack-refs with: peeled fully-peeled sorted 
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 refs/heads/master
+ddd7a4eaded2729e3bd83f4bf74b549d39460402 refs/heads/packfile_demo
+5350fa43e7e3a6263c85e47d24b3351f84be9a22 refs/heads/test
+</pre>
+
+<p class="cmdcomment">
+Similar to the object packfile format, Git may
+
+manage references in an optimized manner.
+
+Some projects have thousands of branches (and tags),
+
+and managing those in individual files is a waste.<br>
+
+See git-pack-refs for details.<br>
+
+Do the plumbing commands (cat-file etc.) still work?
+
+</p>
+<pre class="cmdline" id="step55">55# git cat-file -p ddd7a4e</pre>
+<pre class="cmdoutput">
+tree aaee22c35ff84b15b28b1baa0ef121c9bb217b69
+parent e9fa7d0e1ad0936501b478ec962e84b8412cac82
+author Ijon Tichy &lt;ijon@beteigeuze.space> 946728000 +0000
+committer Ijon Tichy &lt;ijon@beteigeuze.space> 946728000 +0000
+
+adding to largefile.txt, 100
+</pre>
+
+<p class="cmdcomment">
+The packfile layer is transparent to plumbing commands,
+
+e.g., cat-file will work as before, accessing packfiles
+
+instead of plain object files if necessary.<br>
+
+If you want to know more about packfiles:<br>
+
+https://git-scm.com/book/en/v2/Git-Internals-Packfiles<br>
+
+<br>
+
+Up to something completely different.<br>
+
+Some notes on the differences between<br>
+
+git checkout, git reset --soft, git reset (--mixed), git reset --hard...
+</p>
+<h3 class="headline" id="headline56">git checkout and detached HEAD</h3>
+
+<pre class="cmdline" id="step56">56# git checkout master && git status && head -v .git/HEAD</pre>
+<pre class="cmdoutput">
+Switched to branch 'master'
+On branch master
+nothing to commit, working tree clean
+==> .git/HEAD &lt;==
+ref: refs/heads/master
+</pre>
+
+<p class="cmdcomment">
+checkout updates index and working directory.<br>
+
+checkout does not alter any branch HEAD (just .git/HEAD).<br>
+
+After checkout, the index and working directory (tree) will be identical
+
+to the chosen commit (tree) (with default options).
+
+</p>
+<pre class="cmdline" id="step57">57# git checkout c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 && git status</pre>
+<pre class="cmdoutput">
+Note: switching to 'c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at c8d9b9c first commit
+HEAD detached at c8d9b9c
+nothing to commit, working tree clean
+</pre>
+
+<p class="cmdcomment">
+Specifying a commit hash for checkout will result in
+
+"detached HEAD" state.
+
+</p>
+<pre class="cmdline" id="step58">58# cat .git/HEAD</pre>
+<pre class="cmdoutput">
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48
+</pre>
+
+<p class="cmdcomment">
+Note HEAD is just a hash now, not a ref:... reference to some
+
+.git/refs/heads/BRANCH pointer.<br>
+
+You can even commit things...
+
+</p>
+<pre class="cmdline" id="step59">59# echo "commit in detached head" > detached.txt && git add detached.txt && git commit -m "detached.txt"</pre>
+<pre class="cmdoutput">
+[detached HEAD 4bffad8] detached.txt
+ 1 file changed, 1 insertion(+)
+ create mode 100644 detached.txt
+</pre>
+
+<pre class="cmdline" id="step60">60# git checkout test</pre>
+<pre class="cmdoutput">
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  4bffad8 detached.txt
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> 4bffad8
+
+Switched to branch 'test'
+</pre>
+
+<p class="cmdcomment">
+...and Git will helpfully warn you when moving away that
+
+without creating a branch or tag pointing to the last commit,
+
+it's dangling (a "loose object"). It'll be retrievable by
+
+hash only, and might get removed by garbage collection in a while
+
+(see gc.pruneExpire, default is two weeks).
+</p>
+<h3 class="headline" id="headline61">git reflog</h3>
+
+<pre class="cmdline" id="step61">61# git reflog | head</pre>
+<pre class="cmdoutput">
+5350fa4 HEAD@{0}: checkout: moving from 4bffad870e307173ee175f4f3929bc39ba0fb772 to test
+4bffad8 HEAD@{1}: commit: detached.txt
+c8d9b9c HEAD@{2}: checkout: moving from master to c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48
+c8d9b9c HEAD@{3}: checkout: moving from packfile_demo to master
+6ecf002 HEAD@{4}: commit (amend): first commit
+4033e22 HEAD@{5}: commit (initial): first commit
+</pre>
+
+<p class="cmdcomment">
+The reflog is a local log of the HEAD pointer and other references.
+
+Whenever you do a commit/checkout/reset, a line will be written to this log.
+
+The log isn't part of the actual repo and will not be shared by "git push"
+
+and the like.<br>
+
+Note that the fun we had with the plumbing commands didn't update
+
+the reflog.<br>
+
+It's a handy thing to look at if you got lost at any point, or are
+
+working with detached HEAD and the like.<br>
+
+Note the reflog entries expire (see gc.reflogExpire, default 90 days).
+
+Also, the reflog provides functionality such as the master@{one.week.ago}
+
+notation, which really looks at the reflog (i.e., "what did master point
+
+to one week ago on this machine") and NOT at the commit log.<br>
+
+Up to git reset...
+</p>
+<h3 class="headline" id="headline62">The resets of Git</h3>
+
+<pre class="cmdline" id="step62">62# git checkout test && echo "...plus more text" >> test.txt && git add test.txt && git commit -m "changing test.txt" && git log --pretty=oneline</pre>
+<pre class="cmdoutput">
+Already on 'test'
+[test 5395c9c] changing test.txt
+ 1 file changed, 1 insertion(+)
+5395c9ce4bd2ccb14dd3f7b847694fe87b2c2d94 changing test.txt
+5350fa43e7e3a6263c85e47d24b3351f84be9a22 a commit, done the hard way
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 first commit
+</pre>
+
+<p class="cmdcomment">
+To recap, in the test branch, we started with one commit adding
+
+the README, then one commit adding test.txt, and we just committed
+
+a change to test.txt.
+
+</p>
+<pre class="cmdline" id="step63">63# git reset --soft 5350fa4 && git status</pre>
+<pre class="cmdoutput">
+On branch test
+Changes to be committed:
+  (use "git restore --staged &lt;file>..." to unstage)
+	modified:   test.txt
+
+</pre>
+
+<p class="cmdcomment">
+reset --soft moves the HEAD of the current branch to the selected
+
+tree/commit.<br>
+
+It does *not* touch the index nor the working directory.<br>
+
+In consequence, after soft reset, git status will show differences
+
+of your (unchanged) working directory and index to the branch HEAD
+
+that has been reset.<br>
+
+That means that if you soft reset to any commit, then git commit
+
+again immediately, the resulting tree of the new commit will be
+
+identical to your starting working directory. One thing you can
+
+easily do with that is squashing commits within a branch, but
+
+probably rebase --interactive (we will look at that later) is
+
+better suited for that.<br>
+
+If you want to get rid of changes of a commit, reset --soft
+
+is not what you want.
+
+</p>
+<pre class="cmdline" id="step64">64# git reset 5350fa4 && git status</pre>
+<pre class="cmdoutput">
+Unstaged changes after reset:
+M	test.txt
+On branch test
+Changes not staged for commit:
+  (use "git add &lt;file>..." to update what will be committed)
+  (use "git restore &lt;file>..." to discard changes in working directory)
+	modified:   test.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+</pre>
+
+<p class="cmdcomment">
+reset --mixed (the default) changes current branch HEAD *and* index
+
+to the selected tree/commit.<br>
+
+It does not touch the working directory.<br>
+
+This command is good for reworking commit(s), e.g., splitting
+
+changes that have been accidentally put into one commit,
+
+but similar to reset --soft, probably rebase --interactive
+
+will be the better choice for this.<br>
+
+Again, if you want to get rid of changes of a commit,
+
+reset --mixed is not what you want.
+
+</p>
+<pre class="cmdline" id="step65">65# git reset --hard 5350fa4 && git status && head -v test.txt</pre>
+<pre class="cmdoutput">
+HEAD is now at 5350fa4 a commit, done the hard way
+On branch test
+nothing to commit, working tree clean
+==> test.txt &lt;==
+The hard way
+</pre>
+
+<p class="cmdcomment">
+reset --hard additionally overwrites the working directory with
+
+the index. Any uncommitted changes of the working directory will be lost.<br>
+
+This is the go-to command to get rid of commits completely,
+
+switching around branches (e.g., if you want to switch master
+
+and dev branches), or get rid of any local changes (e.g.,
+
+git reset --hard origin/master).<br>
+
+<br>
+
+Note that all reset commands potentially move HEAD back in
+
+history (or to some commit that has no common ancestor with
+
+the previous state even). If that is done, if working with
+
+remote repositories, you will need to be able to force push.<br>
+
+<br>
+
+Time to dive into remote repositories.
+</p>
+<h3 class="headline" id="headline66">Working with remote repositories</h3>
+
+<pre class="cmdline" id="step66">66# ls -1 ../fakeremote</pre>
+<pre class="cmdoutput">
+branches
+config
+description
+HEAD
+hooks
+info
+objects
+refs
+</pre>
+
+<p class="cmdcomment">
+For the purposes of this demo, we use a pre-initialized
+
+local bare repository as remote. A bare repository is
+
+basically just the contents of the .git/ folder, without
+
+any working directory.<br>
+
+This highlights a key aspect of what remotes
+
+are: They're basically just pointers to a separate .git/
+
+directory, regardless of whether they're reachable
+
+via SSH, HTTP, or directly via filesystem access.
+
+</p>
+<pre class="cmdline" id="step67">67# git clone ../fakeremote git-playground</pre>
+<pre class="cmdoutput">
+Cloning into 'git-playground'...
+done.
+</pre>
+
+<p class="cmdcomment">
+Just pretend this was something like<br>
+
+git clone git@someserver:git-playground.git<br>
+
+Cloning a remote repository basically sets up a local
+
+empty .git/ repository and adds the remote repository
+
+as a remote called 'origin'. When using defaults, git clone
+
+then connects to the origin, fetches its Git object files,
+
+creates remote-tracking branches for the branches of the
+
+remote, then creates a local master branch, sets its HEAD
+
+to origin/master and checks it out.<br>
+
+Note that if you connect to an actual remote server,
+
+it will output "Enumerating objects" etc. messages during
+
+clone; that's the remote server repacking (only) those
+
+object files that are needed to finish the operation.
+
+I.e., any "loose objects" etc. are not transmitted,
+
+and in case you used the --depth or --single-branch
+
+options with git clone, just a fraction of the remote's
+
+objects will be transmitted typically.
+
+</p>
+<pre class="cmdline" id="step68">68# cat git-playground/.git/config</pre>
+<pre class="cmdoutput">
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = example/../fakeremote
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+	remote = origin
+	merge = refs/heads/master
+</pre>
+
+<p class="cmdcomment">
+.git/config is used to keep track of the fact that the
+
+local master branch is tracking a remote repository
+
+branch.
+
+</p>
+<pre class="cmdline" id="step69">69# find git-playground/.git/refs -type f && tail -v git-playground/.git/refs/remotes/origin/HEAD</pre>
+<pre class="cmdoutput">
+git-playground/.git/refs/heads/master
+git-playground/.git/refs/remotes/origin/HEAD
+==> git-playground/.git/refs/remotes/origin/HEAD &lt;==
+ref: refs/remotes/origin/master
+</pre>
+
+<p class="cmdcomment">
+No magic: Remote branches are just text files
+
+containing commit references, just as are local branches.<br>
+
+There's no .git/refs/remotes/origin/master though...?
+
+</p>
+<pre class="cmdline" id="step70">70# cat git-playground/.git/packed-refs</pre>
+<pre class="cmdoutput">
+# pack-refs with: peeled fully-peeled sorted 
+27c0b46416b5c6ed7b0d75b835c06cabefb8c044 refs/remotes/origin/master
+</pre>
+
+<p class="cmdcomment">
+Remember references may get packed instead of put in their own file.
+
+<br>
+
+Let's go back to the previous local example repository and do some cleanup.
+
+</p>
+<pre class="cmdline" id="step71">71# rm -rf git-playground && git checkout master && git branch -D packfile_demo && git branch -D test</pre>
+<pre class="cmdoutput">
+Switched to branch 'master'
+Deleted branch packfile_demo (was ddd7a4e).
+Deleted branch test (was 5350fa4).
+</pre>
+
+<p class="cmdcomment">
+...and add the remote under the name 'playground':
+
+</p>
+<pre class="cmdline" id="step72">72# git remote add playground ../fakeremote && git remote -v</pre>
+<pre class="cmdoutput">
+playground	../fakeremote (fetch)
+playground	../fakeremote (push)
+</pre>
+
+<p class="cmdcomment">
+There's no need to start by cloning; you can add a
+
+remote to an existing local repository as well.
+
+</p>
+<pre class="cmdline" id="step73">73# git branch -a</pre>
+<pre class="cmdoutput">
+* master
+</pre>
+
+<p class="cmdcomment">
+No change is visible yet, even with the new remote
+
+added.
+
+</p>
+<pre class="cmdline" id="step74">74# git fetch playground && git branch -a</pre>
+<pre class="cmdoutput">
+warning: no common commits
+From ../fakeremote
+ * [new branch]      master     -> playground/master
+* master
+  remotes/playground/master
+</pre>
+
+<p class="cmdcomment">
+After git fetch, we see the remote branches.
+
+fetch doesn't change local branches nor the index
+
+nor the working directory.
+
+</p>
+<pre class="cmdline" id="step75">75# cat .git/refs/remotes/playground/master && grep "master" .git/packed-refs</pre>
+<pre class="cmdoutput">
+27c0b46416b5c6ed7b0d75b835c06cabefb8c044
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 refs/heads/master
+</pre>
+
+<p class="cmdcomment">
+Note that remotes/playground/master is completely
+
+different from our local master as currently these
+
+repositories have noting in common, which Git was
+
+also pointing out nicely during fetch.<br>
+
+<br>
+
+By the way, you probably don't want to use grep and
+
+cat to resolve references, especially with references
+
+getting stored in two different ways possibly.
+
+</p>
+<pre class="cmdline" id="step76">76# git show-ref master</pre>
+<pre class="cmdoutput">
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 refs/heads/master
+27c0b46416b5c6ed7b0d75b835c06cabefb8c044 refs/remotes/playground/master
+</pre>
+
+<p class="cmdcomment">
+...is probably easier.<br>
+
+</p>
+<pre class="cmdline" id="step77">77# cat .git/config</pre>
+<pre class="cmdoutput">
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[user]
+	name = Ijon Tichy
+	email = ijon@beteigeuze.space
+[remote "playground"]
+	url = ../fakeremote
+	fetch = +refs/heads/*:refs/remotes/playground/*
+</pre>
+
+<p class="cmdcomment">
+Note that adding a remote didn't make any of our
+
+local branches track a remote one, in contrast to
+
+when cloning a repo.<br>
+
+<br>
+
+Say we want to push the local master to the remote.
+
+Does simple git push work?
+
+</p>
+<pre class="cmdline" id="step78">78# git push playground master</pre>
+<pre class="cmdoutput">
+To ../fakeremote
+ ! [rejected]        master -> master (non-fast-forward)
+error: failed to push some refs to '../fakeremote'
+hint: Updates were rejected because the tip of your current branch is behind
+hint: its remote counterpart. Integrate the remote changes (e.g.
+hint: 'git pull ...') before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+</pre>
+
+<p class="cmdcomment">
+No. Our local master branch has no reference to the
+
+current remote master HEAD in its history, i.e.,
+
+the remote master HEAD is not any ancestor of our
+
+local master, so standard push will fail.<br>
+
+For the time being, let's push the local master
+
+to the remote, under another branch name.
+
+</p>
+<pre class="cmdline" id="step79">79# git push playground master:master_in_playground</pre>
+<pre class="cmdoutput">
+To ../fakeremote
+ * [new branch]      master -> master_in_playground
+</pre>
+
+<p class="cmdcomment">
+git push supports LOCALBRANCH:REMOTEBRANCH syntax
+
+for pushing a local branch to a remote under a
+
+different name.
+
+</p>
+<pre class="cmdline" id="step80">80# cat .git/config</pre>
+<pre class="cmdoutput">
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[user]
+	name = Ijon Tichy
+	email = ijon@beteigeuze.space
+[remote "playground"]
+	url = ../fakeremote
+	fetch = +refs/heads/*:refs/remotes/playground/*
+</pre>
+
+<p class="cmdcomment">
+Note that just pushing our branch does *not* make
+
+our local master track the remote master_in_playground
+
+branch...
+
+</p>
+<pre class="cmdline" id="step81">81# git pull</pre>
+<pre class="cmdoutput">
+There is no tracking information for the current branch.
+Please specify which branch you want to rebase against.
+See git-pull(1) for details.
+
+    git pull <remote> <branch>
+
+If you wish to set tracking information for this branch you can do so with:
+
+    git branch --set-upstream-to=<remote>/<branch> master
+
+</pre>
+
+<p class="cmdcomment">
+...which means that git pull does not know what to do.
+
+</p>
+<pre class="cmdline" id="step82">82# git branch -u playground/master_in_playground</pre>
+<pre class="cmdoutput">
+Branch 'master' set up to track remote branch 'master_in_playground' from 'playground'.
+</pre>
+
+<p class="cmdcomment">
+branch -u (shorthand for branch --set-upstream-to)
+
+makes the current branch track a remote
+
+branch. When pushing a branch to a remote for the
+
+first time, the -u flag is available as well.
+
+</p>
+<pre class="cmdline" id="step83">83# cat .git/config</pre>
+<pre class="cmdoutput">
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[user]
+	name = Ijon Tichy
+	email = ijon@beteigeuze.space
+[remote "playground"]
+	url = ../fakeremote
+	fetch = +refs/heads/*:refs/remotes/playground/*
+[branch "master"]
+	remote = playground
+	merge = refs/heads/master_in_playground
+</pre>
+
+<p class="cmdcomment">
+The tracking info has been added to .git/config...
+
+</p>
+<pre class="cmdline" id="step84">84# git pull</pre>
+<pre class="cmdoutput">
+Current branch master is up to date.
+</pre>
+
+<p class="cmdcomment">
+...and git pull works just as expected.
+
+</p>
+<pre class="cmdline" id="step85">85# git push playground --delete master_in_playground</pre>
+<pre class="cmdoutput">
+To ../fakeremote
+ - [deleted]         master_in_playground
+</pre>
+
+<p class="cmdcomment">
+We did that only for demo purposes and delete the
+
+remote master_in_playground branch again.<br>
+
+Previously, the default push to remote master failed.<br>
+
+Let's force push which just overwrites the remote master
+
+HEAD without any checks.
+
+</p>
+<pre class="cmdline" id="step86">86# git push --force playground master</pre>
+<pre class="cmdoutput">
+To ../fakeremote
+ + 27c0b46...c8d9b9c master -> master (forced update)
+</pre>
+
+<p class="cmdcomment">
+That works. It might not for 'true' remotes that have
+
+branch protection enabled. This feature disallows (force) pushes
+
+if there's no reference to the current remote HEAD in the
+
+pushed branch history; i.e., for protected branches you
+
+are limited to adding commits on top.<br>
+
+Protected branches are a feature of Git services such as
+
+GitHub and GitHub and can get configured in their web UIs.<br>
+
+Let's check if the push actually worked.
+
+</p>
+<pre class="cmdline" id="step87">87# git show-ref master</pre>
+<pre class="cmdoutput">
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 refs/heads/master
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 refs/remotes/playground/master
+</pre>
+
+<p class="cmdcomment">
+It did. The local master HEAD and the remote playground/master
+
+are identical now.<br>
+
+Let's not forget to set up remote tracking.
+
+</p>
+<pre class="cmdline" id="step88">88# git branch -u playground/master</pre>
+<pre class="cmdoutput">
+Branch 'master' set up to track remote branch 'master' from 'playground'.
+</pre>
+
+<p class="cmdcomment">
+Now, let's play around with commits, pushes, merges, and rebasing.
+</p>
+<h3 class="headline" id="headline89">Committing, pushing, merging, rebasing</h3>
+
+<pre class="cmdline" id="step89">89# echo "Commit A" > commit_a && git add commit_a && git commit -m 'commit_a' && git push playground</pre>
+<pre class="cmdoutput">
+To ../fakeremote
+   c8d9b9c..21d78fc  master -> master
+[master 21d78fc] commit_a
+ 1 file changed, 1 insertion(+)
+ create mode 100644 commit_a
+</pre>
+
+<p class="cmdcomment">
+...so now we have a file 'commit_a' both locally and on the remote.
+
+Let's undo that commit locally.
+
+</p>
+<pre class="cmdline" id="step90">90# git reset --hard HEAD~ && git status</pre>
+<pre class="cmdoutput">
+HEAD is now at c8d9b9c first commit
+On branch master
+Your branch is behind 'playground/master' by 1 commit, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+
+nothing to commit, working tree clean
+</pre>
+
+<p class="cmdcomment">
+As expected, since we 'forgot' the last commit locally, the remote is
+
+ahead of us now. Let's ignore that and add another file locally,
+
+just as would happen if we kept developing while someone else
+
+pushed new commits to the server.
+
+</p>
+<pre class="cmdline" id="step91">91# echo "Commit B" > commit_b && git add commit_b && git commit -m 'commit_b' && git status</pre>
+<pre class="cmdoutput">
+[master 40a1d20] commit_b
+ 1 file changed, 1 insertion(+)
+ create mode 100644 commit_b
+On branch master
+Your branch and 'playground/master' have diverged,
+and have 1 and 1 different commits each, respectively.
+  (use "git pull" to merge the remote branch into yours)
+
+nothing to commit, working tree clean
+</pre>
+
+<p class="cmdcomment">
+Local and remote master have diverged. push will fail now; force push
+
+would overwrite commit A in the remote repo.<br>
+
+Time for a bit of visualization, finally.
+
+</p>
+<pre class="cmdline" id="step92">92# git config --local --add alias.graph "log --graph --all --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)&lt;%an>%Creset' --abbrev-commit --date=relative --date-order" && git graph</pre>
+<pre class="cmdoutput">
+* 40a1d20 - (HEAD -> master) commit_b (21 years ago) &lt;Ijon Tichy>
+| * 21d78fc - (playground/master) commit_a (21 years ago) &lt;Ijon Tichy>
+|/  
+* c8d9b9c - first commit (21 years ago) &lt;Ijon Tichy></pre>
+
+<p class="cmdcomment">
+Now, what happens if we merge the remote master?<br>
+
+Merge never changes existing commits (but may create a new commit and a new tree).
+
+Typically, this means that other branches' changes are put *on top* of the current branch commits.
+
+But actually Git doesn't track diffs, so a merge commit is just a marker that two trees have been joined.
+
+Any merge conflicts get resolved 'within' the merge commit.
+
+That's nasty if there have been large conflicts as errors in conflict resolving are difficult to spot.
+
+Also, merging creates a bit of a convoluted git history:
+
+</p>
+<pre class="cmdline" id="step93">93# git merge --no-edit playground/master && git graph</pre>
+<pre class="cmdoutput">
+Merge made by the 'recursive' strategy.
+ commit_a | 1 +
+ 1 file changed, 1 insertion(+)
+ create mode 100644 commit_a
+*   208e599 - (HEAD -> master) Merge remote-tracking branch 'playground/master' (21 years ago) &lt;Ijon Tichy>
+|\  
+* | 40a1d20 - commit_b (21 years ago) &lt;Ijon Tichy>
+| * 21d78fc - (playground/master) commit_a (21 years ago) &lt;Ijon Tichy>
+|/  
+* c8d9b9c - first commit (21 years ago) &lt;Ijon Tichy></pre>
+
+<p class="cmdcomment">
+We could push now, but that history is a bit convoluted
+
+for no good reason, right? It's not like the merge commit
+
+adds a lot of information here; it rather complicates things.<br>
+
+<br>
+
+Rebase takes another branch and puts the current branches' changes
+
+on top that, one by one.
+
+This of course changes commit hashes of the current branch
+
+(the history of a commit is part of the basis of its hash) but makes
+
+the local branch a straightforward continuiation of the remote.
+
+Let's reset to commit_b and rebase onto the remote master.
+
+</p>
+<pre class="cmdline" id="step94">94# git reset --hard 40a1d20 && git rebase playground/master && git graph</pre>
+<pre class="cmdoutput">
+HEAD is now at 40a1d20 commit_b
+First, rewinding head to replay your work on top of it...
+Applying: commit_b
+* 2d78b2c - (HEAD -> master) commit_b (21 years ago) &lt;Ijon Tichy>
+* 21d78fc - (playground/master) commit_a (21 years ago) &lt;Ijon Tichy>
+* c8d9b9c - first commit (21 years ago) &lt;Ijon Tichy></pre>
+
+<p class="cmdcomment">
+Much clearer. Note that the commit hash of our local commit_b has
+
+changed because now it has commit_a as parent instead of the first commit.
+
+</p>
+<pre class="cmdline" id="step95">95# git status</pre>
+<pre class="cmdoutput">
+On branch master
+Your branch is ahead of 'playground/master' by 1 commit.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+</pre>
+
+<p class="cmdcomment">
+But that's okay as we can push now without any further complications.
+
+</p>
+<pre class="cmdline" id="step96">96# git push && git graph</pre>
+<pre class="cmdoutput">
+To ../fakeremote
+   21d78fc..2d78b2c  master -> master
+* 2d78b2c - (HEAD -> master, playground/master) commit_b (21 years ago) &lt;Ijon Tichy>
+* 21d78fc - commit_a (21 years ago) &lt;Ijon Tichy>
+* c8d9b9c - first commit (21 years ago) &lt;Ijon Tichy></pre>
+
+<p class="cmdcomment">
+There.<br>
+
+Of course, merge commits have their uses. For example, they are a
+
+good way to document the development process if the merge is the
+
+result of a (non-trivial) Pull Request: Without the merge commit,
+
+there would be no link to the Pull Request in the commit history.<br>
+
+<br>
+
+However, if you want to merge trivial things from a PR, do rebase your
+
+changes onto the destination branch first, then merge using
+
+git merge --ff-only MYBRANCH. This is what "Rebase and merge" in GitHub
+
+does as well (only they know why they don't indicate clearly that
+
+there'll be no merge commit in that case though, which might not
+
+always be desirable).<br>
+
+And IF you want to merge nontrivial things from a PR, do rebase your
+
+changes, then do a normal merge creating a merge commit so that
+
+the history has a pointer to the original PR. Rebasing first
+
+makes sure you don't have to resolve conflicts in the merge commit,
+
+which would be a nasty thing (e.g., mistakes introduced in merge
+
+commit conflict resolution are really hard to find later).
+</p>
+<h3 class="headline" id="headline97">Merge vs. rebase/cherry pick</h3>
+
+<p class="cmdcomment">
+Instead of a rebase, we could also reset --hard to the branch we
+
+want to rebase onto, then git cherry-pick all the commits we want
+
+to add.<br>
+
+What is difference of cherry-pick and merge?
+
+git merge looks for the common ancestor, then does a diff between
+
+that ancestor and the specified commit, applies the diff to the
+
+current index, then commits the result, giving the specified commit as
+
+an additional parent of the merge commit (easy, isn't it?).<br>
+
+git cherry-pick doesn't look for an ancestor; it just diffs from
+
+the specified commit to its parent and applies and commits that
+
+diff. So cherry-pick is really only about changes introduced in
+
+single commits whereas merge is concerned with "everything up to"
+
+the specified commit.<br>
+
+Let's reset to an older commit, then cherry pick commits.
+
+</p>
+<pre class="cmdline" id="step97">97# git reset --hard c8d9b9c && echo "---" && git cherry-pick 21d78fc 2d78b2c && echo "---" && git log --pretty=oneline</pre>
+<pre class="cmdoutput">
+HEAD is now at c8d9b9c first commit
+---
+[master 21d78fc] commit_a
+ Date: Sat Jan 1 12:00:00 2000 +0000
+ 1 file changed, 1 insertion(+)
+ create mode 100644 commit_a
+[master 2d78b2c] commit_b
+ Date: Sat Jan 1 12:00:00 2000 +0000
+ 1 file changed, 1 insertion(+)
+ create mode 100644 commit_b
+---
+2d78b2cfec3aa09041ccf4772453003692fa69ec commit_b
+21d78fce05d66a5c99b56dc77a511d1bc28706e1 commit_a
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 first commit
+</pre>
+
+<p class="cmdcomment">
+Note the hashes stayed the same! This won't happen in practice,
+
+if you re-arrange commits, for example (and you didn't pin commit
+
+and author dates, as we did at the beginning).
+
+</p>
+<pre class="cmdline" id="step98">98# git reset --hard c8d9b9c && echo "---" && git cherry-pick 2d78b2c 21d78fc && echo "---" && git log --pretty=oneline</pre>
+<pre class="cmdoutput">
+HEAD is now at c8d9b9c first commit
+---
+[master 40a1d20] commit_b
+ Date: Sat Jan 1 12:00:00 2000 +0000
+ 1 file changed, 1 insertion(+)
+ create mode 100644 commit_b
+[master b43bd9c] commit_a
+ Date: Sat Jan 1 12:00:00 2000 +0000
+ 1 file changed, 1 insertion(+)
+ create mode 100644 commit_a
+---
+b43bd9c7eec7d1d2bb7ac3a3641ff408bace8f5d commit_a
+40a1d20f7a96609e8767ef9c8da9a29d2244fb88 commit_b
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 first commit
+</pre>
+
+<p class="cmdcomment">
+We changed the order of the two commits, and now their commit
+
+hashes have changed because their "parent" commit has changed,
+
+and that metadata is part of the commit hash.
+</p>
+<h3 class="headline" id="headline99">rebase --interactive</h3>
+
+<p class="cmdcomment">
+A more comfortable and versatile way of rearranging commits
+
+is using interactive rebase. In standard usage, it opens a list
+
+of commits since the specified commit and lets you rework those
+
+commits; this includes rearranging/amending/editing/merging/dropping
+
+commits.
+
+</p>
+<pre class="cmdline" id="step99">99# GIT_SEQUENCE_EDITOR=cat git rebase --interactive c8d9b9c</pre>
+<pre class="cmdoutput">
+[KSuccessfully rebased and updated refs/heads/master.
+pick 40a1d20 commit_b
+pick b43bd9c commit_a
+
+# Rebase c8d9b9c..b43bd9c onto c8d9b9c (2 commands)
+#
+# Commands:
+# p, pick &lt;commit> = use commit
+# r, reword &lt;commit> = use commit, but edit the commit message
+# e, edit &lt;commit> = use commit, but stop for amending
+# s, squash &lt;commit> = use commit, but meld into previous commit
+# f, fixup &lt;commit> = like "squash", but discard this commit's log message
+# x, exec &lt;command> = run command (the rest of the line) using shell
+# b, break = stop here (continue rebase later with 'git rebase --continue')
+# d, drop &lt;commit> = remove commit
+# l, label &lt;label> = label current HEAD with a name
+# t, reset &lt;label> = reset HEAD to a label
+# m, merge [-C &lt;commit> | -c &lt;commit>] &lt;label> [# &lt;oneline>]
+# .       create a merge commit using the original merge commit's
+# .       message (or the oneline, if no original merge commit was
+# .       specified). Use -c &lt;commit> to reword the commit message.
+#
+# These lines can be re-ordered; they are executed from top to bottom.
+#
+# If you remove a line here THAT COMMIT WILL BE LOST.
+#
+# However, if you remove everything, the rebase will be aborted.
+#
+# Note that empty commits are commented out
+</pre>
+
+<p class="cmdcomment">
+(note the GIT_SEQUENCE_EDITOR=cat thing here is just to make the
+
+command non-interactive for the sake of this presentation)<br>
+
+Git is nice and displays a rather comprehensive help along with
+
+the commit list as well.<br>
+
+So, for rearranging commits in the style we did above using
+
+reset plus cherry-pick, we can just edit that list as well.
+
+</p>
+<pre class="cmdline" id="step100">100# git reset --hard 2d78b2</pre>
+<pre class="cmdoutput">
+HEAD is now at 2d78b2c commit_b
+</pre>
+
+<p class="cmdcomment">
+...first, reset back to the "commit A first, then commit B" version...
+
+</p>
+<pre class="cmdline" id="step101">101# GIT_SEQUENCE_EDITOR="../reverse_file" git rebase --interactive c8d9b9c && git log --pretty=oneline</pre>
+<pre class="cmdoutput">
+Rebasing (1/2)Rebasing (2/2)[KSuccessfully rebased and updated refs/heads/master.
+b43bd9c7eec7d1d2bb7ac3a3641ff408bace8f5d commit_a
+40a1d20f7a96609e8767ef9c8da9a29d2244fb88 commit_b
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 first commit
+</pre>
+
+<p class="cmdcomment">
+And behold, it's the same result as with the cherry picks:
+
+Now commit B comes first, and commit A is second.<br>
+
+<br>
+
+Note conflicts occurring during rebase may need some concentration
+
+to resolve. If you want to do something complex, consider issuing
+
+multiple rebase --interactive commands, rearranging and squashing
+
+commits in different runs. Take a look at git status often. Remember
+
+there's always git rebase --abort.<br>
+
+In general, a good practice is to do a rebase --interactive on your
+
+PR branches just before merging them in order to clean up the
+
+branch (not needed if you squash the PR branch commits in the merge
+
+anyways).
+
+</p>
+<pre class="cmdline" id="step102">102# git reset --hard 2d78b2</pre>
+<pre class="cmdoutput">
+HEAD is now at 2d78b2c commit_b
+</pre>
+
+<p class="cmdcomment">
+...again, reset back to "commit A first, then commit B".
+
+</p>
+<pre class="cmdline" id="step103">103# echo "Fixed commit A" > commit_a && git commit -m "fixup! commit_a" commit_a</pre>
+<pre class="cmdoutput">
+[master a6a7ad1] fixup! commit_a
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+</pre>
+
+<p class="cmdcomment">
+A quick look at a nice goodie built into rebase --interactive:
+
+When using the syntax "fixup! (some previous commit message)" as
+
+a commit message, that commit will be squashed into the referenced
+
+previous commit on a rebase --interactive --autosquash.
+
+</p>
+<pre class="cmdline" id="step104">104# GIT_SEQUENCE_EDITOR=cat git rebase --interactive c8d9b9c --autosquash</pre>
+<pre class="cmdoutput">
+Rebasing (2/3)Rebasing (3/3)[KSuccessfully rebased and updated refs/heads/master.
+pick 21d78fc commit_a
+fixup a6a7ad1 fixup! commit_a
+pick 2d78b2c commit_b
+
+# Rebase c8d9b9c..a6a7ad1 onto c8d9b9c (3 commands)
+#
+# Commands:
+# p, pick &lt;commit> = use commit
+# r, reword &lt;commit> = use commit, but edit the commit message
+# e, edit &lt;commit> = use commit, but stop for amending
+# s, squash &lt;commit> = use commit, but meld into previous commit
+# f, fixup &lt;commit> = like "squash", but discard this commit's log message
+# x, exec &lt;command> = run command (the rest of the line) using shell
+# b, break = stop here (continue rebase later with 'git rebase --continue')
+# d, drop &lt;commit> = remove commit
+# l, label &lt;label> = label current HEAD with a name
+# t, reset &lt;label> = reset HEAD to a label
+# m, merge [-C &lt;commit> | -c &lt;commit>] &lt;label> [# &lt;oneline>]
+# .       create a merge commit using the original merge commit's
+# .       message (or the oneline, if no original merge commit was
+# .       specified). Use -c &lt;commit> to reword the commit message.
+#
+# These lines can be re-ordered; they are executed from top to bottom.
+#
+# If you remove a line here THAT COMMIT WILL BE LOST.
+#
+# However, if you remove everything, the rebase will be aborted.
+#
+# Note that empty commits are commented out
+</pre>
+
+<p class="cmdcomment">
+Nice: The fixup commit has been moved immediately after the commit
+
+it references, and the action has been changed to "fixup" as well.<br>
+
+Let's have a look at the history...
+
+</p>
+<pre class="cmdline" id="step105">105# git log --pretty=oneline</pre>
+<pre class="cmdoutput">
+db259018e09184c90d2996a0df7c2c1f7805d827 commit_b
+c401edd2ebc00980cb8ee1298777909de1733793 commit_a
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 first commit
+</pre>
+
+<p class="cmdcomment">
+The fixup commit is gone and has been melded into the original commit.<br>
+
+Let's reset to a cleaner state for the next steps.
+
+</p>
+<pre class="cmdline" id="step106">106# git reset --hard 2d78b2c</pre>
+<pre class="cmdoutput">
+HEAD is now at 2d78b2c commit_b
+</pre>
+<h3 class="headline" id="headline107">Working with branches with differing trees</h3>
+
+<p class="cmdcomment">
+Often, you will want to work on several branches that will never
+
+be identical, e.g., a development and a production branch that
+
+will diverge with regard to configuration and some code (debugging, etc.).<br>
+
+You don't want production-only commits winding up in development;
+
+you don't want development-only commits getting merged into production.<br>
+
+How can you do that?<br>
+
+</p>
+<pre class="cmdline" id="step107">107# git branch production && git checkout production && echo "Production config" > production.conf && git add production.conf && git commit -m "production config"</pre>
+<pre class="cmdoutput">
+Switched to branch 'production'
+[production caae1d1] production config
+ 1 file changed, 1 insertion(+)
+ create mode 100644 production.conf
+</pre>
+
+<pre class="cmdline" id="step108">108# git checkout master && echo "Development config" > development.conf && git add development.conf && git commit -m "development config"</pre>
+<pre class="cmdoutput">
+Switched to branch 'master'
+Your branch is up to date with 'playground/master'.
+[master 0f12049] development config
+ 1 file changed, 1 insertion(+)
+ create mode 100644 development.conf
+</pre>
+
+<p class="cmdcomment">
+Ok great, so let's do some development in the master branch.
+
+</p>
+<pre class="cmdline" id="step109">109# echo -e "#!/bin/bash\necho 'Hello world'" > hello_world.sh && chmod a+x hello_world.sh && git add hello_world.sh && git commit -m "add hello_world.sh"</pre>
+<pre class="cmdoutput">
+[master 0a5cb55] add hello_world.sh
+ 1 file changed, 2 insertions(+)
+ create mode 100755 hello_world.sh
+</pre>
+
+<p class="cmdcomment">
+Now, let's merge that into production.
+
+</p>
+<pre class="cmdline" id="step110">110# git checkout production && git merge --no-edit master</pre>
+<pre class="cmdoutput">
+Switched to branch 'production'
+Merge made by the 'recursive' strategy.
+ development.conf | 1 +
+ hello_world.sh   | 2 ++
+ 2 files changed, 3 insertions(+)
+ create mode 100644 development.conf
+ create mode 100755 hello_world.sh
+</pre>
+
+<p class="cmdcomment">
+That's not great. The development config was merged into production as well.
+
+We'll have to undo that.<br>
+
+But while we're at it, how does a merge commit look like?
+
+</p>
+<pre class="cmdline" id="step111">111# git log -1</pre>
+<pre class="cmdoutput">
+commit 655b1cfd043d03966c5efcd5862535e7397edc35
+Merge: caae1d1 0a5cb55
+Author: Ijon Tichy &lt;ijon@beteigeuze.space>
+Date:   Sat Jan 1 12:00:00 2000 +0000
+
+    Merge branch 'master' into production
+</pre>
+
+<p class="cmdcomment">
+Ok, and what does a merge commit look internally?
+
+</p>
+<pre class="cmdline" id="step112">112# git cat-file -p 655b1cfd043d03966c5efcd5862535e7397edc35</pre>
+<pre class="cmdoutput">
+tree bf9910b30216b4aca40c9f6c253f6e1880529399
+parent caae1d1f565d8d0f370d7db95af481e88b72f253
+parent 0a5cb5530949f158d2e02f0ca8d6755bf90cce27
+author Ijon Tichy &lt;ijon@beteigeuze.space> 946728000 +0000
+committer Ijon Tichy &lt;ijon@beteigeuze.space> 946728000 +0000
+
+Merge branch 'master' into production
+</pre>
+
+<p class="cmdcomment">
+A merge commit has several parent commits instead of one
+
+parent.<br>
+
+Note that in the low level commit view this is nothing
+
+special at all - it does not spell out "merge"
+
+anywhere, and any commit might have 100 parent commits
+
+just as well as one or two parents, and yes,
+
+git merge actually supports merging more than one
+
+branch at once.<br>
+
+Also, note that there's no "main parent" or anything
+
+like that. All the parent metadata entries say is that
+
+the content of those parent commits is "taken care of"
+
+in this commit tree, and that's just the same for
+
+commits that have only one parent.<br>
+
+Anyways, we didn't want to merge development config.
+
+Let's quickly undo that.
+
+</p>
+<pre class="cmdline" id="step113">113# git reset --hard caae1d1 && git graph</pre>
+<pre class="cmdoutput">
+HEAD is now at caae1d1 production config
+* 0a5cb55 - (master) add hello_world.sh (21 years ago) &lt;Ijon Tichy>
+| * caae1d1 - (HEAD -> production) production config (21 years ago) &lt;Ijon Tichy>
+* | 0f12049 - development config (21 years ago) &lt;Ijon Tichy>
+|/  
+* 2d78b2c - (playground/master) commit_b (21 years ago) &lt;Ijon Tichy>
+* 21d78fc - commit_a (21 years ago) &lt;Ijon Tichy>
+* c8d9b9c - first commit (21 years ago) &lt;Ijon Tichy></pre>
+
+<p class="cmdcomment">
+We have to tell Git to ignore the commit that added the development
+
+config when merging.<br>
+
+This can be done by changing the "merge strategy".
+
+The default merge strategy is "recursive" which does merges
+
+as we all know.<br>
+
+There are other strategies as well, including the "ours"
+
+strategy, which actually ignores the things it is told
+
+to merge. That means it essentially marks things as
+
+merged (on commit/Git history level) when they are not
+
+(on file level). Great! That's what we want.
+
+</p>
+<pre class="cmdline" id="step114">114# git merge -s ours -m 'fake merge: ignore dev config' 0f12049 && ls -1</pre>
+<pre class="cmdoutput">
+Merge made by the 'ours' strategy.
+commit_a
+commit_b
+production.conf
+README
+</pre>
+
+<p class="cmdcomment">
+Looking good. Now merge the rest of the dev branch.
+
+</p>
+<pre class="cmdline" id="step115">115# git merge --no-edit master && git graph && echo -e "\n---" && ls -1</pre>
+<pre class="cmdoutput">
+Merge made by the 'recursive' strategy.
+ hello_world.sh | 2 ++
+ 1 file changed, 2 insertions(+)
+ create mode 100755 hello_world.sh
+*   f695c37 - (HEAD -> production) Merge branch 'master' into production (21 years ago) &lt;Ijon Tichy>
+|\  
+* \   ef4c8ba - fake merge: ignore dev config (21 years ago) &lt;Ijon Tichy>
+|\ \  
+| | * 0a5cb55 - (master) add hello_world.sh (21 years ago) &lt;Ijon Tichy>
+| |/  
+* | caae1d1 - production config (21 years ago) &lt;Ijon Tichy>
+| * 0f12049 - development config (21 years ago) &lt;Ijon Tichy>
+|/  
+* 2d78b2c - (playground/master) commit_b (21 years ago) &lt;Ijon Tichy>
+* 21d78fc - commit_a (21 years ago) &lt;Ijon Tichy>
+* c8d9b9c - first commit (21 years ago) &lt;Ijon Tichy>
+---
+commit_a
+commit_b
+hello_world.sh
+production.conf
+README
+</pre>
+
+<p class="cmdcomment">
+That worked! We don't have the dev config, but we do
+
+have the hello world file introduced in the dev branch.
+
+<br>
+
+By the way, the same outcome can be reached by doing all this
+
+manually using git commit-tree and giving the commit we want
+
+to "fake merge" as its parent. We leave this as an exercise to the
+
+reader.<br>
+
+<br>
+
+Now, a quick look at some things worth knowing.
+</p>
+<h3 class="headline" id="headline116">Goodies: --patch</h3>
+
+<pre class="cmdline" id="step116">116# for i in {100..200}; do echo "config_$i=false" >> production.conf; done && git commit -m "some more conf" production.conf</pre>
+<pre class="cmdoutput">
+[production d0bb103] some more conf
+ 1 file changed, 101 insertions(+)
+</pre>
+
+<p class="cmdcomment">
+We add some more lines to the production config.
+
+</p>
+<pre class="cmdline" id="step117">117# sed -i -E 's/config_(..)0=false/config_\10=true/' production.conf && tail -v --l 20 production.conf</pre>
+<pre class="cmdoutput">
+==> production.conf &lt;==
+config_181=false
+config_182=false
+config_183=false
+config_184=false
+config_185=false
+config_186=false
+config_187=false
+config_188=false
+config_189=false
+config_190=true
+config_191=false
+config_192=false
+config_193=false
+config_194=false
+config_195=false
+config_196=false
+config_197=false
+config_198=false
+config_199=false
+config_200=true
+</pre>
+
+<p class="cmdcomment">
+...then we change some lines in that config.<br>
+
+For quickly reviewing and staging changes, there's the
+
+"--patch" (-p) option available for git add and commit:
+
+</p>
+<pre class="cmdline" id="step118">118# yes | git add -p production.conf</pre>
+<pre class="cmdoutput">
+diff --git a/production.conf b/production.conf
+index cd1dd95..8654cee 100644
+--- a/production.conf
++++ b/production.conf
+@@ -1,5 +1,5 @@
+ Production config
+-config_100=false
++config_100=true
+ config_101=false
+ config_102=false
+ config_103=false
+(1/11) Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? @@ -9,7 +9,7 @@ config_106=false
+ config_107=false
+ config_108=false
+ config_109=false
+-config_110=false
++config_110=true
+ config_111=false
+ config_112=false
+ config_113=false
+(2/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -19,7 +19,7 @@ config_116=false
+ config_117=false
+ config_118=false
+ config_119=false
+-config_120=false
++config_120=true
+ config_121=false
+ config_122=false
+ config_123=false
+(3/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -29,7 +29,7 @@ config_126=false
+ config_127=false
+ config_128=false
+ config_129=false
+-config_130=false
++config_130=true
+ config_131=false
+ config_132=false
+ config_133=false
+(4/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -39,7 +39,7 @@ config_136=false
+ config_137=false
+ config_138=false
+ config_139=false
+-config_140=false
++config_140=true
+ config_141=false
+ config_142=false
+ config_143=false
+(5/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -49,7 +49,7 @@ config_146=false
+ config_147=false
+ config_148=false
+ config_149=false
+-config_150=false
++config_150=true
+ config_151=false
+ config_152=false
+ config_153=false
+(6/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -59,7 +59,7 @@ config_156=false
+ config_157=false
+ config_158=false
+ config_159=false
+-config_160=false
++config_160=true
+ config_161=false
+ config_162=false
+ config_163=false
+(7/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -69,7 +69,7 @@ config_166=false
+ config_167=false
+ config_168=false
+ config_169=false
+-config_170=false
++config_170=true
+ config_171=false
+ config_172=false
+ config_173=false
+(8/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -79,7 +79,7 @@ config_176=false
+ config_177=false
+ config_178=false
+ config_179=false
+-config_180=false
++config_180=true
+ config_181=false
+ config_182=false
+ config_183=false
+(9/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -89,7 +89,7 @@ config_186=false
+ config_187=false
+ config_188=false
+ config_189=false
+-config_190=false
++config_190=true
+ config_191=false
+ config_192=false
+ config_193=false
+(10/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -99,4 +99,4 @@ config_196=false
+ config_197=false
+ config_198=false
+ config_199=false
+-config_200=false
++config_200=true
+(11/11) Stage this hunk [y,n,q,a,d,K,g,/,e,?]? 
+</pre>
+
+<p class="cmdcomment">
+This happens interactively (disabled here by the "yes" tool).
+
+...git checkout and reset support -p, too,
+
+so for unstaging a file partially we can use reset HEAD -p:
+
+</p>
+<pre class="cmdline" id="step119">119# yes | git reset HEAD -p production.conf</pre>
+<pre class="cmdoutput">
+diff --git a/production.conf b/production.conf
+index cd1dd95..8654cee 100644
+--- a/production.conf
++++ b/production.conf
+@@ -1,5 +1,5 @@
+ Production config
+-config_100=false
++config_100=true
+ config_101=false
+ config_102=false
+ config_103=false
+(1/11) Unstage this hunk [y,n,q,a,d,j,J,g,/,e,?]? @@ -9,7 +9,7 @@ config_106=false
+ config_107=false
+ config_108=false
+ config_109=false
+-config_110=false
++config_110=true
+ config_111=false
+ config_112=false
+ config_113=false
+(2/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -19,7 +19,7 @@ config_116=false
+ config_117=false
+ config_118=false
+ config_119=false
+-config_120=false
++config_120=true
+ config_121=false
+ config_122=false
+ config_123=false
+(3/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -29,7 +29,7 @@ config_126=false
+ config_127=false
+ config_128=false
+ config_129=false
+-config_130=false
++config_130=true
+ config_131=false
+ config_132=false
+ config_133=false
+(4/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -39,7 +39,7 @@ config_136=false
+ config_137=false
+ config_138=false
+ config_139=false
+-config_140=false
++config_140=true
+ config_141=false
+ config_142=false
+ config_143=false
+(5/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -49,7 +49,7 @@ config_146=false
+ config_147=false
+ config_148=false
+ config_149=false
+-config_150=false
++config_150=true
+ config_151=false
+ config_152=false
+ config_153=false
+(6/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -59,7 +59,7 @@ config_156=false
+ config_157=false
+ config_158=false
+ config_159=false
+-config_160=false
++config_160=true
+ config_161=false
+ config_162=false
+ config_163=false
+(7/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -69,7 +69,7 @@ config_166=false
+ config_167=false
+ config_168=false
+ config_169=false
+-config_170=false
++config_170=true
+ config_171=false
+ config_172=false
+ config_173=false
+(8/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -79,7 +79,7 @@ config_176=false
+ config_177=false
+ config_178=false
+ config_179=false
+-config_180=false
++config_180=true
+ config_181=false
+ config_182=false
+ config_183=false
+(9/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -89,7 +89,7 @@ config_186=false
+ config_187=false
+ config_188=false
+ config_189=false
+-config_190=false
++config_190=true
+ config_191=false
+ config_192=false
+ config_193=false
+(10/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -99,4 +99,4 @@ config_196=false
+ config_197=false
+ config_198=false
+ config_199=false
+-config_200=false
++config_200=true
+(11/11) Unstage this hunk [y,n,q,a,d,K,g,/,e,?]? 
+</pre>
+
+<p class="cmdcomment">
+...let's check...
+
+</p>
+<pre class="cmdline" id="step120">120# git status</pre>
+<pre class="cmdoutput">
+On branch production
+Changes not staged for commit:
+  (use "git add &lt;file>..." to update what will be committed)
+  (use "git restore &lt;file>..." to discard changes in working directory)
+	modified:   production.conf
+
+no changes added to commit (use "git add" and/or "git commit -a")
+</pre>
+
+<p class="cmdcomment">
+Correct.<br>
+
+Let's get rid of the changes for the next part about git bisect.
+
+</p>
+<pre class="cmdline" id="step121">121# git checkout production.conf</pre>
+<pre class="cmdoutput">
+Updated 1 path from the index
+</pre>
+<h3 class="headline" id="headline122">Goodies: Git bisect</h3>
+
+<p class="cmdcomment">
+If your project has a bug that you knew wasn't there a year ago,
+
+but there's about 1000 commits to check, git bisect is there
+
+to help you. It runs a binary search on the commits, finding the
+
+commit that introduced the bug very quickly, and it can do that
+
+in an automated way.
+
+</p>
+<pre class="cmdline" id="step122">122# git bisect start</pre>
+<pre class="cmdoutput">
+</pre>
+
+<p class="cmdcomment">
+...to start the process. Then, you have to mark the broken and
+
+a known good commit.
+
+</p>
+<pre class="cmdline" id="step123">123# git bisect bad && git bisect good caae1d1</pre>
+<pre class="cmdoutput">
+Bisecting: 2 revisions left to test after this (roughly 1 step)
+[0a5cb5530949f158d2e02f0ca8d6755bf90cce27] add hello_world.sh
+</pre>
+
+<p class="cmdcomment">
+Git now tells you how many revisions are left for testing, and
+
+how many steps this will take. Test, then mark, as appropriate.
+
+</p>
+<pre class="cmdline" id="step124">124# git bisect bad</pre>
+<pre class="cmdoutput">
+Bisecting: 0 revisions left to test after this (roughly 0 steps)
+[0f12049d595ccbd4a5f20e4a84d94118eef2465d] development config
+</pre>
+
+<p class="cmdcomment">
+etc. etc. - if you cannot test the current commit, you can skip:
+
+</p>
+<pre class="cmdline" id="step125">125# git bisect skip</pre>
+<pre class="cmdoutput">
+There are only 'skip'ped commits left to test.
+The first bad commit could be any of:
+0f12049d595ccbd4a5f20e4a84d94118eef2465d
+0a5cb5530949f158d2e02f0ca8d6755bf90cce27
+We cannot bisect more!
+</pre>
+
+<p class="cmdcomment">
+...of course bisect might not be able to tell the exect commit
+
+that broke things if it doesn't have complete information.<br>
+
+To end the bisect session once you are done, reset:
+
+</p>
+<pre class="cmdline" id="step126">126# git bisect reset</pre>
+<pre class="cmdoutput">
+Previous HEAD position was 0f12049 development config
+Switched to branch 'production'
+</pre>
+
+<p class="cmdcomment">
+If you have tests ready that can just be run from command line,
+
+git bisect run SCRIPT is your friend.<br>
+
+Note that instead of "bad" and "good", any other terms can get
+
+used.<br>
+
+<br>
+
+For more information on git bisect, see<br>
+
+https://git-scm.com/docs/git-bisect<br>
+
+<br>
+
+Another goodie: If you frequently use long lived topic branches,
+
+you probably struggle with recurring merge conflicts.
+
+git rerere can help you with that.
+</p>
+<h3 class="headline" id="headline127">Goodies: Git rerere</h3>
+
+<p class="cmdcomment">
+rerere means "Reuse recorded resolution of conflicted merges".
+
+Basically, rerere keeps a database of conflict resolutions
+
+and applies those resolutions if it sees the exact conflict
+
+again in any merge or rebase.
+
+Let's reset our development branche to the commit with that
+
+nice long configuration file, and create a new topic branch.
+
+</p>
+<pre class="cmdline" id="step127">127# git remote rm playground && git reset --hard d0bb103 && git branch topic && git checkout topic && tail production.conf</pre>
+<pre class="cmdoutput">
+Switched to branch 'topic'
+HEAD is now at d0bb103 some more conf
+config_191=false
+config_192=false
+config_193=false
+config_194=false
+config_195=false
+config_196=false
+config_197=false
+config_198=false
+config_199=false
+config_200=false
+</pre>
+
+<p class="cmdcomment">
+(of course, never branch off production for a topic branch
+
+in reality...)<br>
+
+Ok! Now we change some bits in the topic branch.
+
+</p>
+<pre class="cmdline" id="step128">128# sed -i -E 's/config_(..)0=false/config_\10=true/' production.conf && tail -v --l 20 production.conf && git commit -m "changed config" production.conf</pre>
+<pre class="cmdoutput">
+==> production.conf &lt;==
+config_181=false
+config_182=false
+config_183=false
+config_184=false
+config_185=false
+config_186=false
+config_187=false
+config_188=false
+config_189=false
+config_190=true
+config_191=false
+config_192=false
+config_193=false
+config_194=false
+config_195=false
+config_196=false
+config_197=false
+config_198=false
+config_199=false
+config_200=true
+[topic ddb58ff] changed config
+ 1 file changed, 11 insertions(+), 11 deletions(-)
+</pre>
+
+<p class="cmdcomment">
+Say that in the production branch some unrelated fix is made.
+
+</p>
+<pre class="cmdline" id="step129">129# git checkout production && sed -i 's/config_100=false/config_100=file_not_found/' production.conf && git commit -m "fix config_100" production.conf</pre>
+<pre class="cmdoutput">
+Switched to branch 'production'
+[production 1fc94bb] fix config_100
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+</pre>
+
+<p class="cmdcomment">
+Say we keep developing in the topic branch.
+
+</p>
+<pre class="cmdline" id="step130">130# git checkout topic</pre>
+<pre class="cmdoutput">
+Switched to branch 'topic'
+</pre>
+
+<p class="cmdcomment">
+At some point, we want to check if merging with the main
+
+branch still works, so we do a "test merge" (that, once
+
+it's done, we'll roll back, since we don't really want
+
+that merge in our topic branch).
+
+</p>
+<pre class="cmdline" id="step131">131# git merge production</pre>
+<pre class="cmdoutput">
+Auto-merging production.conf
+CONFLICT (content): Merge conflict in production.conf
+Automatic merge failed; fix conflicts and then commit the result.
+</pre>
+
+<p class="cmdcomment">
+This results in a merge conflict.
+
+</p>
+<pre class="cmdline" id="step132">132# git diff</pre>
+<pre class="cmdoutput">
+diff --cc production.conf
+index 8654cee,593d505..0000000
+--- a/production.conf
++++ b/production.conf
+@@@ -1,5 -1,5 +1,9 @@@
+  Production config
+++&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+ +config_100=true
+++=======
++ config_100=file_not_found
+++>>>>>>> production
+  config_101=false
+  config_102=false
+  config_103=false
+</pre>
+
+<p class="cmdcomment">
+We could fix it and move on, but since in this development
+
+model we'd be re-doing that merge again later, we'd encounter
+
+that conflict again.<br>
+
+This is where rerere comes into play. We have to enable it first.
+
+</p>
+<pre class="cmdline" id="step133">133# git config --local rerere.enabled true</pre>
+<pre class="cmdoutput">
+</pre>
+
+<p class="cmdcomment">
+You might want to use --global instead of --local on your machine.
+
+Now, we roll back and trigger the merge again.
+
+</p>
+<pre class="cmdline" id="step134">134# git merge --abort && git merge production</pre>
+<pre class="cmdoutput">
+Recorded preimage for 'production.conf'
+Auto-merging production.conf
+CONFLICT (content): Merge conflict in production.conf
+Automatic merge failed; fix conflicts and then commit the result.
+</pre>
+
+<p class="cmdcomment">
+There's the conflict again, but note that "Recorded preimage" line;
+
+that's by the rerere functionality.<br>
+
+Let's fix that conflict now.
+
+</p>
+<pre class="cmdline" id="step135">135# git checkout topic production.conf && sed -i 's/config_100=true/config_100=file_not_found/' production.conf</pre>
+<pre class="cmdoutput">
+Updated 1 path from cd06154
+</pre>
+
+<p class="cmdcomment">
+rerere can tell us about the current state of the resolution:
+
+</p>
+<pre class="cmdline" id="step136">136# git rerere diff</pre>
+<pre class="cmdoutput">
+--- a/production.conf
++++ b/production.conf
+@@ -1,9 +1,5 @@
+ Production config
+-&lt;&lt;&lt;&lt;&lt;&lt;&lt;
+ config_100=file_not_found
+-=======
+-config_100=true
+->>>>>>>
+ config_101=false
+ config_102=false
+ config_103=false
+</pre>
+
+<p class="cmdcomment">
+Let's finalize and commit the merge.
+
+</p>
+<pre class="cmdline" id="step137">137# git add production.conf && git commit --no-edit</pre>
+<pre class="cmdoutput">
+Recorded resolution for 'production.conf'.
+[topic 47898f3] Merge branch 'production' into topic
+</pre>
+
+<p class="cmdcomment">
+Note the conflict resolution has been recorded by rerere.<br>
+
+If we roll back, then do the merge again, the conflict will get
+
+resolved by rerere without further manual intervention.
+
+</p>
+<pre class="cmdline" id="step138">138# git reset --hard ddb58ff && git merge --no-edit production</pre>
+<pre class="cmdoutput">
+Resolved 'production.conf' using previous resolution.
+HEAD is now at ddb58ff changed config
+Auto-merging production.conf
+CONFLICT (content): Merge conflict in production.conf
+Automatic merge failed; fix conflicts and then commit the result.
+</pre>
+
+<p class="cmdcomment">
+The merge will still complain, but the actual conflict is gone,
+
+i.e., one can add and commit the offending file.<br>
+
+Conflict resolutions will be used in rebase, too.
+
+</p>
+<pre class="cmdline" id="step139">139# git reset --hard ddb58ff && git rebase production</pre>
+<pre class="cmdoutput">
+Resolved 'production.conf' using previous resolution.
+error: Failed to merge in the changes.
+hint: Use 'git am --show-current-patch' to see the failed patch
+HEAD is now at ddb58ff changed config
+First, rewinding head to replay your work on top of it...
+Applying: changed config
+Using index info to reconstruct a base tree...
+M	production.conf
+Falling back to patching base and 3-way merge...
+Auto-merging production.conf
+CONFLICT (content): Merge conflict in production.conf
+Patch failed at 0001 changed config
+Resolve all conflicts manually, mark them as resolved with
+"git add/rm &lt;conflicted_files>", then run "git rebase --continue".
+You can instead skip this commit: run "git rebase --skip".
+To abort and get back to the state before "git rebase", run "git rebase --abort".
+</pre>
+
+<p class="cmdcomment">
+This looks bad, but DON'T PANIC.
+
+</p>
+<pre class="cmdline" id="step140">140# git status</pre>
+<pre class="cmdoutput">
+rebase in progress; onto 1fc94bb
+You are currently rebasing branch 'topic' on '1fc94bb'.
+  (fix conflicts and then run "git rebase --continue")
+  (use "git rebase --skip" to skip this patch)
+  (use "git rebase --abort" to check out the original branch)
+
+Unmerged paths:
+  (use "git restore --staged &lt;file>..." to unstage)
+  (use "git add &lt;file>..." to mark resolution)
+	both modified:   production.conf
+
+no changes added to commit (use "git add" and/or "git commit -a")
+</pre>
+
+<p class="cmdcomment">
+This looks fine, doesn't it?
+
+</p>
+<pre class="cmdline" id="step141">141# git diff</pre>
+<pre class="cmdoutput">
+diff --cc production.conf
+index 593d505,8654cee..0000000
+--- a/production.conf
++++ b/production.conf
+</pre>
+
+<p class="cmdcomment">
+...and this looks even better, so just add and continue
+
+the rebase.
+
+</p>
+<pre class="cmdline" id="step142">142# git add production.conf && git rebase --continue</pre>
+<pre class="cmdoutput">
+Applying: changed config
+</pre>
+
+<p class="cmdcomment">
+Let's look at the diff to production.
+
+</p>
+<pre class="cmdline" id="step143">143# git diff production | head --l 20</pre>
+<pre class="cmdoutput">
+diff --git a/production.conf b/production.conf
+index 593d505..34f7a09 100644
+--- a/production.conf
++++ b/production.conf
+@@ -9,7 +9,7 @@ config_106=false
+ config_107=false
+ config_108=false
+ config_109=false
+-config_110=false
++config_110=true
+ config_111=false
+ config_112=false
+ config_113=false
+@@ -19,7 +19,7 @@ config_116=false
+ config_117=false
+ config_118=false
+ config_119=false
+-config_120=false
++config_120=true
+ config_121=false
+</pre>
+
+<p class="cmdcomment">
+Such nice diff! Note there's no trace of the conflict.
+
+</p>
+<pre class="cmdline" id="step144">144# git log --pretty=oneline</pre>
+<pre class="cmdoutput">
+02b9030adf3a837f19ad9b635a8c9165ee993c8a changed config
+1fc94bb6c197b00a594f9c9996957ab838867d87 fix config_100
+d0bb103972bd7407175de2ac1a25f9b9b7fea24b some more conf
+f695c37d7477387dfbb84e6d3f05e6aa9bfe3b26 Merge branch 'master' into production
+ef4c8baa9b59c8d50b2bbb1429a613be81e444c0 fake merge: ignore dev config
+0a5cb5530949f158d2e02f0ca8d6755bf90cce27 add hello_world.sh
+caae1d1f565d8d0f370d7db95af481e88b72f253 production config
+0f12049d595ccbd4a5f20e4a84d94118eef2465d development config
+2d78b2cfec3aa09041ccf4772453003692fa69ec commit_b
+21d78fce05d66a5c99b56dc77a511d1bc28706e1 commit_a
+c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 first commit
+</pre>
+
+<p class="cmdcomment">
+...and such nice history.
+
+<br>
+
+For more information on git rerere, see<br>
+
+https://git-scm.com/docs/git-rerere<br>
+
+https://git-scm.com/book/en/v2/Git-Tools-Rerere<br>
+</p>
+<h3 class="headline" id="headline145">Thanks</h3>
+
+<pre class="cmdline" id="step145">145# echo Thanks go to...</pre>
+<pre class="cmdoutput">
+Thanks go to...
+</pre>
+
+<p class="cmdcomment">
+Pro Git book https://git-scm.com/book/en/v2<br>
+
+Git plumbing https://medium.com/@shalithasuranga/how-does-git-work-internally-7c36dcb1f2cf<br>
+
+Fellow B&Bers for input<br>
+
+</body></html>
