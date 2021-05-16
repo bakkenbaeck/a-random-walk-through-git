@@ -1,6 +1,7 @@
-A Random Walk Through Git
+# A Random Walk Through Git
 
-Just run the DEMO.sh script
+Just run the `DEMO.sh` script.
+Give step number as parameter to fast forward to that step: `./DEMO.sh 52`
 
 Or see its output at https://bakkenbaeck.github.io/a-random-walk-through-git
 
