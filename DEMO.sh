@@ -398,7 +398,7 @@ git push --force playground master
 # pushed branch history; i.e., for protected branches you
 # are limited to adding commits on top.§
 # Protected branches are a feature of Git services such as
-# GitHub and GitHub and can get configured in their web UIs.§
+# GitHub and GitLab, and can get configured in their web UIs.§
 # Let's check if the push actually worked.
 git show-ref master
 # It did. The local master HEAD and the remote playground/master
