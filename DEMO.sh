@@ -236,14 +236,21 @@ git reflog | head
 # Whenever you do a commit/checkout/reset, a line will be written to this log.
 # The log isn't part of the actual repo and will not be shared by "git push"
 # and the like.§
-# Note that the fun we had with the plumbing commands didn't update
+# Note that the fun we had when the plumbing commands didn't update
 # the reflog.§
 # It's a handy thing to look at if you got lost at any point, or are
 # working with detached HEAD and the like.§
+git reflog --date=iso | head
+# reflog can also show the time the reflog entry was created along with
+# the other data. Note that in this demo, the date is broken due to us
+# fixing the dates using env variables.§
 # Note the reflog entries expire (see gc.reflogExpire, default 90 days).
 # Also, the reflog provides functionality such as the master@{one.week.ago}
 # notation, which really looks at the reflog (i.e., "what did master point
 # to one week ago on this machine") and NOT at the commit log.§
+git log -g | head --l 16
+# Note git log also has a variant that walks the reflog instead of the
+# commit ancestry.§
 # Up to git reset...
 % The resets of Git
 git checkout test && echo "...plus more text" >> test.txt && git add test.txt && git commit -m "changing test.txt" && git log --pretty=oneline

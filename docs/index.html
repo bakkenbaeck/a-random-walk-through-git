@@ -8,16 +8,16 @@
 <li><a href="#headline46">Packfiles</a></li>
 <li><a href="#headline56">git checkout and detached HEAD</a></li>
 <li><a href="#headline61">git reflog</a></li>
-<li><a href="#headline62">The resets of Git</a></li>
-<li><a href="#headline66">Working with remote repositories</a></li>
-<li><a href="#headline89">Committing, pushing, merging, rebasing</a></li>
-<li><a href="#headline97">Merge vs. rebase/cherry pick</a></li>
-<li><a href="#headline99">rebase --interactive</a></li>
-<li><a href="#headline107">Working with branches with differing trees</a></li>
-<li><a href="#headline116">Goodies: --patch</a></li>
-<li><a href="#headline122">Goodies: Git bisect</a></li>
-<li><a href="#headline127">Goodies: Git rerere</a></li>
-<li><a href="#headline145">Thanks</a></li>
+<li><a href="#headline64">The resets of Git</a></li>
+<li><a href="#headline68">Working with remote repositories</a></li>
+<li><a href="#headline91">Committing, pushing, merging, rebasing</a></li>
+<li><a href="#headline99">Merge vs. rebase/cherry pick</a></li>
+<li><a href="#headline101">rebase --interactive</a></li>
+<li><a href="#headline109">Working with branches with differing trees</a></li>
+<li><a href="#headline118">Goodies: --patch</a></li>
+<li><a href="#headline124">Goodies: Git bisect</a></li>
+<li><a href="#headline129">Goodies: Git rerere</a></li>
+<li><a href="#headline147">Thanks</a></li>
 </ul>
 <h3 class="headline" id="headline1">Preface</h3>
 
@@ -759,13 +759,13 @@ that are similar.
 </p>
 <pre class="cmdline" id="step52">52# find .git/objects -type f && du -h --max-depth=0 .git/objects</pre>
 <pre class="cmdoutput">
-.git/objects/pack/pack-2807100738f92adc1805fcd25fc20a8a51a97d17.pack
-.git/objects/pack/pack-2807100738f92adc1805fcd25fc20a8a51a97d17.rev
-.git/objects/pack/pack-2807100738f92adc1805fcd25fc20a8a51a97d17.idx
 .git/objects/pack/pack-512fa896d13897b83753e4401f2204d0c4908516.pack
 .git/objects/pack/pack-512fa896d13897b83753e4401f2204d0c4908516.rev
 .git/objects/pack/pack-512fa896d13897b83753e4401f2204d0c4908516.mtimes
 .git/objects/pack/pack-512fa896d13897b83753e4401f2204d0c4908516.idx
+.git/objects/pack/pack-cab01d1c43db861740e4cd83ad7e2351b42f449a.pack
+.git/objects/pack/pack-cab01d1c43db861740e4cd83ad7e2351b42f449a.rev
+.git/objects/pack/pack-cab01d1c43db861740e4cd83ad7e2351b42f449a.idx
 .git/objects/info/packs
 .git/objects/info/commit-graph
 156K	.git/objects
@@ -950,13 +950,29 @@ The log isn't part of the actual repo and will not be shared by "git push"
 
 and the like.<br>
 
-Note that the fun we had with the plumbing commands didn't update
+Note that the fun we had when the plumbing commands didn't update
 
 the reflog.<br>
 
 It's a handy thing to look at if you got lost at any point, or are
 
 working with detached HEAD and the like.<br>
+
+</p>
+<pre class="cmdline" id="step62">62# git reflog --date=iso | head</pre>
+<pre class="cmdoutput">
+5350fa4 HEAD@{2000-01-01 12:00:00 +0000}: checkout: moving from 4bffad870e307173ee175f4f3929bc39ba0fb772 to test
+4bffad8 HEAD@{2000-01-01 12:00:00 +0000}: commit: detached.txt
+c8d9b9c HEAD@{2000-01-01 12:00:00 +0000}: checkout: moving from master to c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48
+c8d9b9c HEAD@{2000-01-01 12:00:00 +0000}: checkout: moving from packfile_demo to master
+</pre>
+
+<p class="cmdcomment">
+reflog can also show the time the reflog entry was created along with
+
+the other data. Note that in this demo, the date is broken due to us
+
+fixing the dates using env variables.<br>
 
 Note the reflog entries expire (see gc.reflogExpire, default 90 days).
 
@@ -966,11 +982,37 @@ notation, which really looks at the reflog (i.e., "what did master point
 
 to one week ago on this machine") and NOT at the commit log.<br>
 
+</p>
+<pre class="cmdline" id="step63">63# git log -g | head --l 16</pre>
+<pre class="cmdoutput">
+commit 5350fa43e7e3a6263c85e47d24b3351f84be9a22
+Reflog: HEAD@{0} (Ijon Tichy &lt;ijon@beteigeuze.space>)
+Reflog message: checkout: moving from 4bffad870e307173ee175f4f3929bc39ba0fb772 to test
+Author: Ijon Tichy &lt;ijon@beteigeuze.space>
+Date:   Sat Jan 1 12:00:00 2000 +0000
+
+    a commit, done the hard way
+
+commit 4bffad870e307173ee175f4f3929bc39ba0fb772
+Reflog: HEAD@{1} (Ijon Tichy &lt;ijon@beteigeuze.space>)
+Reflog message: commit: detached.txt
+Author: Ijon Tichy &lt;ijon@beteigeuze.space>
+Date:   Sat Jan 1 12:00:00 2000 +0000
+
+    detached.txt
+
+</pre>
+
+<p class="cmdcomment">
+Note git log also has a variant that walks the reflog instead of the
+
+commit ancestry.<br>
+
 Up to git reset...
 </p>
-<h3 class="headline" id="headline62">The resets of Git</h3>
+<h3 class="headline" id="headline64">The resets of Git</h3>
 
-<pre class="cmdline" id="step62">62# git checkout test && echo "...plus more text" >> test.txt && git add test.txt && git commit -m "changing test.txt" && git log --pretty=oneline</pre>
+<pre class="cmdline" id="step64">64# git checkout test && echo "...plus more text" >> test.txt && git add test.txt && git commit -m "changing test.txt" && git log --pretty=oneline</pre>
 <pre class="cmdoutput">
 Already on 'test'
 [test 5395c9c] changing test.txt
@@ -988,7 +1030,7 @@ the README, then one commit adding test.txt, and we just committed
 a change to test.txt.
 
 </p>
-<pre class="cmdline" id="step63">63# git reset --soft 5350fa4 && git status</pre>
+<pre class="cmdline" id="step65">65# git reset --soft 5350fa4 && git status</pre>
 <pre class="cmdoutput">
 On branch test
 Changes to be committed:
@@ -1027,7 +1069,7 @@ If you want to get rid of changes of a commit, reset --soft
 is not what you want.
 
 </p>
-<pre class="cmdline" id="step64">64# git reset 5350fa4 && git status</pre>
+<pre class="cmdline" id="step66">66# git reset 5350fa4 && git status</pre>
 <pre class="cmdoutput">
 Unstaged changes after reset:
 M	test.txt
@@ -1060,7 +1102,7 @@ Again, if you want to get rid of changes of a commit,
 reset --mixed is not what you want.
 
 </p>
-<pre class="cmdline" id="step65">65# git reset --hard 5350fa4 && git status && head -v test.txt</pre>
+<pre class="cmdline" id="step67">67# git reset --hard 5350fa4 && git status && head -v test.txt</pre>
 <pre class="cmdoutput">
 HEAD is now at 5350fa4 a commit, done the hard way
 On branch test
@@ -1096,9 +1138,9 @@ remote repositories, you will need to be able to force push.<br>
 
 Time to dive into remote repositories.
 </p>
-<h3 class="headline" id="headline66">Working with remote repositories</h3>
+<h3 class="headline" id="headline68">Working with remote repositories</h3>
 
-<pre class="cmdline" id="step66">66# ls -1 ../fakeremote</pre>
+<pre class="cmdline" id="step68">68# ls -1 ../fakeremote</pre>
 <pre class="cmdoutput">
 config
 description
@@ -1127,7 +1169,7 @@ directory, regardless of whether they're reachable
 via SSH, HTTP, or directly via filesystem access.
 
 </p>
-<pre class="cmdline" id="step67">67# git clone ../fakeremote git-playground</pre>
+<pre class="cmdline" id="step69">69# git clone ../fakeremote git-playground</pre>
 <pre class="cmdoutput">
 Cloning into 'git-playground'...
 done.
@@ -1169,7 +1211,7 @@ options with git clone, just a fraction of the remote's
 objects will be transmitted typically.
 
 </p>
-<pre class="cmdline" id="step68">68# cat git-playground/.git/config</pre>
+<pre class="cmdline" id="step70">70# cat git-playground/.git/config</pre>
 <pre class="cmdoutput">
 [core]
 	repositoryformatversion = 0
@@ -1192,7 +1234,7 @@ local master branch is tracking a remote repository
 branch.
 
 </p>
-<pre class="cmdline" id="step69">69# find git-playground/.git/refs -type f && tail -v git-playground/.git/refs/remotes/origin/HEAD</pre>
+<pre class="cmdline" id="step71">71# find git-playground/.git/refs -type f && tail -v git-playground/.git/refs/remotes/origin/HEAD</pre>
 <pre class="cmdoutput">
 git-playground/.git/refs/heads/master
 git-playground/.git/refs/remotes/origin/HEAD
@@ -1208,7 +1250,7 @@ containing commit references, just as are local branches.<br>
 There's no .git/refs/remotes/origin/master though...?
 
 </p>
-<pre class="cmdline" id="step70">70# cat git-playground/.git/packed-refs</pre>
+<pre class="cmdline" id="step72">72# cat git-playground/.git/packed-refs</pre>
 <pre class="cmdoutput">
 # pack-refs with: peeled fully-peeled sorted 
 27c0b46416b5c6ed7b0d75b835c06cabefb8c044 refs/remotes/origin/master
@@ -1222,7 +1264,7 @@ Remember references may get packed instead of put in their own file.
 Let's go back to the previous local example repository and do some cleanup.
 
 </p>
-<pre class="cmdline" id="step71">71# rm -rf git-playground && git checkout master && git branch -D packfile_demo && git branch -D test</pre>
+<pre class="cmdline" id="step73">73# rm -rf git-playground && git checkout master && git branch -D packfile_demo && git branch -D test</pre>
 <pre class="cmdoutput">
 Switched to branch 'master'
 Deleted branch packfile_demo (was ddd7a4e).
@@ -1233,7 +1275,7 @@ Deleted branch test (was 5350fa4).
 ...and add the remote under the name 'playground':
 
 </p>
-<pre class="cmdline" id="step72">72# git remote add playground ../fakeremote && git remote -v</pre>
+<pre class="cmdline" id="step74">74# git remote add playground ../fakeremote && git remote -v</pre>
 <pre class="cmdoutput">
 playground	../fakeremote (fetch)
 playground	../fakeremote (push)
@@ -1245,7 +1287,7 @@ There's no need to start by cloning; you can add a
 remote to an existing local repository as well.
 
 </p>
-<pre class="cmdline" id="step73">73# git branch -a</pre>
+<pre class="cmdline" id="step75">75# git branch -a</pre>
 <pre class="cmdoutput">
 * master
 </pre>
@@ -1256,7 +1298,7 @@ No change is visible yet, even with the new remote
 added.
 
 </p>
-<pre class="cmdline" id="step74">74# git fetch playground && git branch -a</pre>
+<pre class="cmdline" id="step76">76# git fetch playground && git branch -a</pre>
 <pre class="cmdoutput">
 From ../fakeremote
  * [new branch]      master     -> playground/master
@@ -1273,7 +1315,7 @@ fetch doesn't change local branches nor the index
 nor the working directory.
 
 </p>
-<pre class="cmdline" id="step75">75# cat .git/refs/remotes/playground/master && grep "master" .git/packed-refs</pre>
+<pre class="cmdline" id="step77">77# cat .git/refs/remotes/playground/master && grep "master" .git/packed-refs</pre>
 <pre class="cmdoutput">
 27c0b46416b5c6ed7b0d75b835c06cabefb8c044
 c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 refs/heads/master
@@ -1297,7 +1339,7 @@ cat to resolve references, especially with references
 getting stored in two different ways possibly.
 
 </p>
-<pre class="cmdline" id="step76">76# git show-ref master</pre>
+<pre class="cmdline" id="step78">78# git show-ref master</pre>
 <pre class="cmdoutput">
 c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 refs/heads/master
 27c0b46416b5c6ed7b0d75b835c06cabefb8c044 refs/remotes/playground/master
@@ -1307,7 +1349,7 @@ c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 refs/heads/master
 ...is probably easier.<br>
 
 </p>
-<pre class="cmdline" id="step77">77# cat .git/config</pre>
+<pre class="cmdline" id="step79">79# cat .git/config</pre>
 <pre class="cmdoutput">
 [core]
 	repositoryformatversion = 0
@@ -1336,7 +1378,7 @@ Say we want to push the local master to the remote.
 Does simple git push work?
 
 </p>
-<pre class="cmdline" id="step78">78# git push playground master</pre>
+<pre class="cmdline" id="step80">80# git push playground master</pre>
 <pre class="cmdoutput">
 To ../fakeremote
  ! [rejected]        master -> master (non-fast-forward)
@@ -1361,7 +1403,7 @@ For the time being, let's push the local master
 to the remote, under another branch name.
 
 </p>
-<pre class="cmdline" id="step79">79# git push playground master:master_in_playground</pre>
+<pre class="cmdline" id="step81">81# git push playground master:master_in_playground</pre>
 <pre class="cmdoutput">
 To ../fakeremote
  * [new branch]      master -> master_in_playground
@@ -1375,7 +1417,7 @@ for pushing a local branch to a remote under a
 different name.
 
 </p>
-<pre class="cmdline" id="step80">80# cat .git/config</pre>
+<pre class="cmdline" id="step82">82# cat .git/config</pre>
 <pre class="cmdoutput">
 [core]
 	repositoryformatversion = 0
@@ -1398,7 +1440,7 @@ our local master track the remote master_in_playground
 branch...
 
 </p>
-<pre class="cmdline" id="step81">81# git pull</pre>
+<pre class="cmdline" id="step83">83# git pull</pre>
 <pre class="cmdoutput">
 There is no tracking information for the current branch.
 Please specify which branch you want to rebase against.
@@ -1416,7 +1458,7 @@ If you wish to set tracking information for this branch you can do so with:
 ...which means that git pull does not know what to do.
 
 </p>
-<pre class="cmdline" id="step82">82# git branch -u playground/master_in_playground</pre>
+<pre class="cmdline" id="step84">84# git branch -u playground/master_in_playground</pre>
 <pre class="cmdoutput">
 branch 'master' set up to track 'playground/master_in_playground'.
 </pre>
@@ -1431,7 +1473,7 @@ branch. When pushing a branch to a remote for the
 first time, the -u flag is available as well.
 
 </p>
-<pre class="cmdline" id="step83">83# cat .git/config</pre>
+<pre class="cmdline" id="step85">85# cat .git/config</pre>
 <pre class="cmdoutput">
 [core]
 	repositoryformatversion = 0
@@ -1453,7 +1495,7 @@ first time, the -u flag is available as well.
 The tracking info has been added to .git/config...
 
 </p>
-<pre class="cmdline" id="step84">84# git pull</pre>
+<pre class="cmdline" id="step86">86# git pull</pre>
 <pre class="cmdoutput">
 Already up to date.
 </pre>
@@ -1462,7 +1504,7 @@ Already up to date.
 ...and git pull works just as expected.
 
 </p>
-<pre class="cmdline" id="step85">85# git push playground --delete master_in_playground</pre>
+<pre class="cmdline" id="step87">87# git push playground --delete master_in_playground</pre>
 <pre class="cmdoutput">
 To ../fakeremote
  - [deleted]         master_in_playground
@@ -1480,7 +1522,7 @@ Let's force push which just overwrites the remote master
 HEAD without any checks.
 
 </p>
-<pre class="cmdline" id="step86">86# git push --force playground master</pre>
+<pre class="cmdline" id="step88">88# git push --force playground master</pre>
 <pre class="cmdoutput">
 To ../fakeremote
  + 27c0b46...c8d9b9c master -> master (forced update)
@@ -1504,7 +1546,7 @@ GitHub and GitLab, and can get configured in their web UIs.<br>
 Let's check if the push actually worked.
 
 </p>
-<pre class="cmdline" id="step87">87# git show-ref master</pre>
+<pre class="cmdline" id="step89">89# git show-ref master</pre>
 <pre class="cmdoutput">
 c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 refs/heads/master
 c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 refs/remotes/playground/master
@@ -1518,7 +1560,7 @@ are identical now.<br>
 Let's not forget to set up remote tracking.
 
 </p>
-<pre class="cmdline" id="step88">88# git branch -u playground/master</pre>
+<pre class="cmdline" id="step90">90# git branch -u playground/master</pre>
 <pre class="cmdoutput">
 branch 'master' set up to track 'playground/master'.
 </pre>
@@ -1526,9 +1568,9 @@ branch 'master' set up to track 'playground/master'.
 <p class="cmdcomment">
 Now, let's play around with commits, pushes, merges, and rebasing.
 </p>
-<h3 class="headline" id="headline89">Committing, pushing, merging, rebasing</h3>
+<h3 class="headline" id="headline91">Committing, pushing, merging, rebasing</h3>
 
-<pre class="cmdline" id="step89">89# echo "Commit A" > commit_a && git add commit_a && git commit -m 'commit_a' && git push playground</pre>
+<pre class="cmdline" id="step91">91# echo "Commit A" > commit_a && git add commit_a && git commit -m 'commit_a' && git push playground</pre>
 <pre class="cmdoutput">
 To ../fakeremote
    c8d9b9c..21d78fc  master -> master
@@ -1543,7 +1585,7 @@ To ../fakeremote
 Let's undo that commit locally.
 
 </p>
-<pre class="cmdline" id="step90">90# git reset --hard HEAD~ && git status</pre>
+<pre class="cmdline" id="step92">92# git reset --hard HEAD~ && git status</pre>
 <pre class="cmdoutput">
 HEAD is now at c8d9b9c first commit
 On branch master
@@ -1563,7 +1605,7 @@ just as would happen if we kept developing while someone else
 pushed new commits to the server.
 
 </p>
-<pre class="cmdline" id="step91">91# echo "Commit B" > commit_b && git add commit_b && git commit -m 'commit_b' && git status</pre>
+<pre class="cmdline" id="step93">93# echo "Commit B" > commit_b && git add commit_b && git commit -m 'commit_b' && git status</pre>
 <pre class="cmdoutput">
 [master 40a1d20] commit_b
  1 file changed, 1 insertion(+)
@@ -1584,7 +1626,7 @@ would overwrite commit A in the remote repo.<br>
 Time for a bit of visualization, finally.
 
 </p>
-<pre class="cmdline" id="step92">92# git config --local --add alias.graph "log --graph --all --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)&lt;%an>%Creset' --abbrev-commit --date=relative --date-order" && git graph</pre>
+<pre class="cmdline" id="step94">94# git config --local --add alias.graph "log --graph --all --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)&lt;%an>%Creset' --abbrev-commit --date=relative --date-order" && git graph</pre>
 <pre class="cmdoutput">
 * 40a1d20 - (HEAD -> master) commit_b (26 years ago) &lt;Ijon Tichy>
 | * 21d78fc - (playground/master, playground/HEAD) commit_a (26 years ago) &lt;Ijon Tichy>
@@ -1607,7 +1649,7 @@ That's nasty if there have been large conflicts as errors in conflict resolving 
 Also, merging creates a bit of a convoluted git history:
 
 </p>
-<pre class="cmdline" id="step93">93# git merge --no-edit playground/master && git graph</pre>
+<pre class="cmdline" id="step95">95# git merge --no-edit playground/master && git graph</pre>
 <pre class="cmdoutput">
 Merge made by the 'ort' strategy.
  commit_a | 1 +
@@ -1642,7 +1684,7 @@ the local branch a straightforward continuiation of the remote.
 Let's reset to commit_b and rebase onto the remote master.
 
 </p>
-<pre class="cmdline" id="step94">94# git reset --hard 40a1d20 && git rebase playground/master && git graph</pre>
+<pre class="cmdline" id="step96">96# git reset --hard 40a1d20 && git rebase playground/master && git graph</pre>
 <pre class="cmdoutput">
 Rebasing (1/1)Successfully rebased and updated refs/heads/master.
 HEAD is now at 40a1d20 commit_b
@@ -1656,7 +1698,7 @@ Much clearer. Note that the commit hash of our local commit_b has
 changed because now it has commit_a as parent instead of the first commit.
 
 </p>
-<pre class="cmdline" id="step95">95# git status</pre>
+<pre class="cmdline" id="step97">97# git status</pre>
 <pre class="cmdoutput">
 On branch master
 Your branch is ahead of 'playground/master' by 1 commit.
@@ -1669,7 +1711,7 @@ nothing to commit, working tree clean
 But that's okay as we can push now without any further complications.
 
 </p>
-<pre class="cmdline" id="step96">96# git push && git graph</pre>
+<pre class="cmdline" id="step98">98# git push && git graph</pre>
 <pre class="cmdoutput">
 To ../fakeremote
    21d78fc..2d78b2c  master -> master
@@ -1714,7 +1756,7 @@ which would be a nasty thing (e.g., mistakes introduced in merge
 
 commit conflict resolution are really hard to find later).
 </p>
-<h3 class="headline" id="headline97">Merge vs. rebase/cherry pick</h3>
+<h3 class="headline" id="headline99">Merge vs. rebase/cherry pick</h3>
 
 <p class="cmdcomment">
 Instead of a rebase, we could also reset --hard to the branch we
@@ -1746,7 +1788,7 @@ the specified commit.<br>
 Let's reset to an older commit, then cherry pick commits.
 
 </p>
-<pre class="cmdline" id="step97">97# git reset --hard c8d9b9c && echo "---" && git cherry-pick 21d78fc 2d78b2c && echo "---" && git log --pretty=oneline</pre>
+<pre class="cmdline" id="step99">99# git reset --hard c8d9b9c && echo "---" && git cherry-pick 21d78fc 2d78b2c && echo "---" && git log --pretty=oneline</pre>
 <pre class="cmdoutput">
 HEAD is now at c8d9b9c first commit
 ---
@@ -1772,7 +1814,7 @@ if you re-arrange commits, for example (and you didn't pin commit
 and author dates, as we did at the beginning).
 
 </p>
-<pre class="cmdline" id="step98">98# git reset --hard c8d9b9c && echo "---" && git cherry-pick 2d78b2c 21d78fc && echo "---" && git log --pretty=oneline</pre>
+<pre class="cmdline" id="step100">100# git reset --hard c8d9b9c && echo "---" && git cherry-pick 2d78b2c 21d78fc && echo "---" && git log --pretty=oneline</pre>
 <pre class="cmdoutput">
 HEAD is now at c8d9b9c first commit
 ---
@@ -1797,7 +1839,7 @@ hashes have changed because their "parent" commit has changed,
 
 and that metadata is part of the commit hash.
 </p>
-<h3 class="headline" id="headline99">rebase --interactive</h3>
+<h3 class="headline" id="headline101">rebase --interactive</h3>
 
 <p class="cmdcomment">
 A more comfortable and versatile way of rearranging commits
@@ -1811,7 +1853,7 @@ commits; this includes rearranging/amending/editing/merging/dropping
 commits.
 
 </p>
-<pre class="cmdline" id="step99">99# GIT_SEQUENCE_EDITOR=cat git rebase --interactive c8d9b9c</pre>
+<pre class="cmdline" id="step101">101# GIT_SEQUENCE_EDITOR=cat git rebase --interactive c8d9b9c</pre>
 <pre class="cmdoutput">
 Successfully rebased and updated refs/heads/master.
 pick 40a1d20 commit_b
@@ -1863,7 +1905,7 @@ So, for rearranging commits in the style we did above using
 reset plus cherry-pick, we can just edit that list as well.
 
 </p>
-<pre class="cmdline" id="step100">100# git reset --hard 2d78b2</pre>
+<pre class="cmdline" id="step102">102# git reset --hard 2d78b2</pre>
 <pre class="cmdoutput">
 HEAD is now at 2d78b2c commit_b
 </pre>
@@ -1872,7 +1914,7 @@ HEAD is now at 2d78b2c commit_b
 ...first, reset back to the "commit A first, then commit B" version...
 
 </p>
-<pre class="cmdline" id="step101">101# GIT_SEQUENCE_EDITOR="../reverse_file" git rebase --interactive c8d9b9c && git log --pretty=oneline</pre>
+<pre class="cmdline" id="step103">103# GIT_SEQUENCE_EDITOR="../reverse_file" git rebase --interactive c8d9b9c && git log --pretty=oneline</pre>
 <pre class="cmdoutput">
 Rebasing (1/2)Rebasing (2/2)Successfully rebased and updated refs/heads/master.
 b43bd9c7eec7d1d2bb7ac3a3641ff408bace8f5d commit_a
@@ -1906,7 +1948,7 @@ branch (not needed if you squash the PR branch commits in the merge
 anyways).
 
 </p>
-<pre class="cmdline" id="step102">102# git reset --hard 2d78b2</pre>
+<pre class="cmdline" id="step104">104# git reset --hard 2d78b2</pre>
 <pre class="cmdoutput">
 HEAD is now at 2d78b2c commit_b
 </pre>
@@ -1915,7 +1957,7 @@ HEAD is now at 2d78b2c commit_b
 ...again, reset back to "commit A first, then commit B".
 
 </p>
-<pre class="cmdline" id="step103">103# echo "Fixed commit A" > commit_a && git commit -m "fixup! commit_a" commit_a</pre>
+<pre class="cmdline" id="step105">105# echo "Fixed commit A" > commit_a && git commit -m "fixup! commit_a" commit_a</pre>
 <pre class="cmdoutput">
 [master a6a7ad1] fixup! commit_a
  1 file changed, 1 insertion(+), 1 deletion(-)
@@ -1931,7 +1973,7 @@ a commit message, that commit will be squashed into the referenced
 previous commit on a rebase --interactive --autosquash.
 
 </p>
-<pre class="cmdline" id="step104">104# GIT_SEQUENCE_EDITOR=cat git rebase --interactive c8d9b9c --autosquash</pre>
+<pre class="cmdline" id="step106">106# GIT_SEQUENCE_EDITOR=cat git rebase --interactive c8d9b9c --autosquash</pre>
 <pre class="cmdoutput">
 Rebasing (2/3)Rebasing (3/3)Successfully rebased and updated refs/heads/master.
 pick 21d78fc commit_a
@@ -1978,7 +2020,7 @@ it references, and the action has been changed to "fixup" as well.<br>
 Let's have a look at the history...
 
 </p>
-<pre class="cmdline" id="step105">105# git log --pretty=oneline</pre>
+<pre class="cmdline" id="step107">107# git log --pretty=oneline</pre>
 <pre class="cmdoutput">
 db259018e09184c90d2996a0df7c2c1f7805d827 commit_b
 c401edd2ebc00980cb8ee1298777909de1733793 commit_a
@@ -1991,11 +2033,11 @@ The fixup commit is gone and has been melded into the original commit.<br>
 Let's reset to a cleaner state for the next steps.
 
 </p>
-<pre class="cmdline" id="step106">106# git reset --hard 2d78b2c</pre>
+<pre class="cmdline" id="step108">108# git reset --hard 2d78b2c</pre>
 <pre class="cmdoutput">
 HEAD is now at 2d78b2c commit_b
 </pre>
-<h3 class="headline" id="headline107">Working with branches with differing trees</h3>
+<h3 class="headline" id="headline109">Working with branches with differing trees</h3>
 
 <p class="cmdcomment">
 Often, you will want to work on several branches that will never
@@ -2011,7 +2053,7 @@ you don't want development-only commits getting merged into production.<br>
 How can you do that?<br>
 
 </p>
-<pre class="cmdline" id="step107">107# git branch production && git checkout production && echo "Production config" > production.conf && git add production.conf && git commit -m "production config"</pre>
+<pre class="cmdline" id="step109">109# git branch production && git checkout production && echo "Production config" > production.conf && git add production.conf && git commit -m "production config"</pre>
 <pre class="cmdoutput">
 Switched to branch 'production'
 [production caae1d1] production config
@@ -2019,7 +2061,7 @@ Switched to branch 'production'
  create mode 100644 production.conf
 </pre>
 
-<pre class="cmdline" id="step108">108# git checkout master && echo "Development config" > development.conf && git add development.conf && git commit -m "development config"</pre>
+<pre class="cmdline" id="step110">110# git checkout master && echo "Development config" > development.conf && git add development.conf && git commit -m "development config"</pre>
 <pre class="cmdoutput">
 Switched to branch 'master'
 Your branch is up to date with 'playground/master'.
@@ -2032,7 +2074,7 @@ Your branch is up to date with 'playground/master'.
 Ok great, so let's do some development in the master branch.
 
 </p>
-<pre class="cmdline" id="step109">109# echo -e "#!/bin/bash\necho 'Hello world'" > hello_world.sh && chmod a+x hello_world.sh && git add hello_world.sh && git commit -m "add hello_world.sh"</pre>
+<pre class="cmdline" id="step111">111# echo -e "#!/bin/bash\necho 'Hello world'" > hello_world.sh && chmod a+x hello_world.sh && git add hello_world.sh && git commit -m "add hello_world.sh"</pre>
 <pre class="cmdoutput">
 [master 0a5cb55] add hello_world.sh
  1 file changed, 2 insertions(+)
@@ -2043,7 +2085,7 @@ Ok great, so let's do some development in the master branch.
 Now, let's merge that into production.
 
 </p>
-<pre class="cmdline" id="step110">110# git checkout production && git merge --no-edit master</pre>
+<pre class="cmdline" id="step112">112# git checkout production && git merge --no-edit master</pre>
 <pre class="cmdoutput">
 Switched to branch 'production'
 Merge made by the 'ort' strategy.
@@ -2062,7 +2104,7 @@ We'll have to undo that.<br>
 But while we're at it, how does a merge commit look like?
 
 </p>
-<pre class="cmdline" id="step111">111# git log -1</pre>
+<pre class="cmdline" id="step113">113# git log -1</pre>
 <pre class="cmdoutput">
 commit 655b1cfd043d03966c5efcd5862535e7397edc35
 Merge: caae1d1 0a5cb55
@@ -2076,7 +2118,7 @@ Date:   Sat Jan 1 12:00:00 2000 +0000
 Ok, and what does a merge commit look internally?
 
 </p>
-<pre class="cmdline" id="step112">112# git cat-file -p 655b1cfd043d03966c5efcd5862535e7397edc35</pre>
+<pre class="cmdline" id="step114">114# git cat-file -p 655b1cfd043d03966c5efcd5862535e7397edc35</pre>
 <pre class="cmdoutput">
 tree bf9910b30216b4aca40c9f6c253f6e1880529399
 parent caae1d1f565d8d0f370d7db95af481e88b72f253
@@ -2119,7 +2161,7 @@ Anyways, we didn't want to merge development config.
 Let's quickly undo that.
 
 </p>
-<pre class="cmdline" id="step113">113# git reset --hard caae1d1 && git graph</pre>
+<pre class="cmdline" id="step115">115# git reset --hard caae1d1 && git graph</pre>
 <pre class="cmdoutput">
 HEAD is now at caae1d1 production config
 * 0a5cb55 - (master) add hello_world.sh (26 years ago) &lt;Ijon Tichy>
@@ -2152,7 +2194,7 @@ merged (on commit/Git history level) when they are not
 (on file level). Great! That's what we want.
 
 </p>
-<pre class="cmdline" id="step114">114# git merge -s ours -m 'fake merge: ignore dev config' 0f12049 && ls -1</pre>
+<pre class="cmdline" id="step116">116# git merge -s ours -m 'fake merge: ignore dev config' 0f12049 && ls -1</pre>
 <pre class="cmdoutput">
 Merge made by the 'ours' strategy.
 commit_a
@@ -2165,7 +2207,7 @@ README
 Looking good. Now merge the rest of the dev branch.
 
 </p>
-<pre class="cmdline" id="step115">115# git merge --no-edit master && git graph && echo -e "\n---" && ls -1</pre>
+<pre class="cmdline" id="step117">117# git merge --no-edit master && git graph && echo -e "\n---" && ls -1</pre>
 <pre class="cmdoutput">
 Merge made by the 'ort' strategy.
  hello_world.sh | 2 ++
@@ -2210,9 +2252,9 @@ reader.<br>
 
 Now, a quick look at some things worth knowing.
 </p>
-<h3 class="headline" id="headline116">Goodies: --patch</h3>
+<h3 class="headline" id="headline118">Goodies: --patch</h3>
 
-<pre class="cmdline" id="step116">116# for i in {100..200}; do echo "config_$i=false" >> production.conf; done && git commit -m "some more conf" production.conf</pre>
+<pre class="cmdline" id="step118">118# for i in {100..200}; do echo "config_$i=false" >> production.conf; done && git commit -m "some more conf" production.conf</pre>
 <pre class="cmdoutput">
 [production d0bb103] some more conf
  1 file changed, 101 insertions(+)
@@ -2222,7 +2264,7 @@ Now, a quick look at some things worth knowing.
 We add some more lines to the production config.
 
 </p>
-<pre class="cmdline" id="step117">117# sed -i -E 's/config_(..)0=false/config_\10=true/' production.conf && tail -v --l 20 production.conf</pre>
+<pre class="cmdline" id="step119">119# sed -i -E 's/config_(..)0=false/config_\10=true/' production.conf && tail -v --l 20 production.conf</pre>
 <pre class="cmdoutput">
 ==> production.conf &lt;==
 config_181=false
@@ -2255,7 +2297,7 @@ For quickly reviewing and staging changes, there's the
 "--patch" (-p) option available for git add and commit:
 
 </p>
-<pre class="cmdline" id="step118">118# yes | git add -p production.conf</pre>
+<pre class="cmdline" id="step120">120# yes | git add -p production.conf</pre>
 <pre class="cmdoutput">
 diff --git a/production.conf b/production.conf
 index cd1dd95..8654cee 100644
@@ -2366,7 +2408,7 @@ This happens interactively (disabled here by the "yes" tool).
 so for unstaging a file partially we can use reset HEAD -p:
 
 </p>
-<pre class="cmdline" id="step119">119# yes | git reset HEAD -p production.conf</pre>
+<pre class="cmdline" id="step121">121# yes | git reset HEAD -p production.conf</pre>
 <pre class="cmdoutput">
 diff --git a/production.conf b/production.conf
 index cd1dd95..8654cee 100644
@@ -2473,7 +2515,7 @@ index cd1dd95..8654cee 100644
 ...let's check...
 
 </p>
-<pre class="cmdline" id="step120">120# git status</pre>
+<pre class="cmdline" id="step122">122# git status</pre>
 <pre class="cmdoutput">
 On branch production
 Changes not staged for commit:
@@ -2490,11 +2532,11 @@ Correct.<br>
 Let's get rid of the changes for the next part about git bisect.
 
 </p>
-<pre class="cmdline" id="step121">121# git checkout production.conf</pre>
+<pre class="cmdline" id="step123">123# git checkout production.conf</pre>
 <pre class="cmdoutput">
 Updated 1 path from the index
 </pre>
-<h3 class="headline" id="headline122">Goodies: Git bisect</h3>
+<h3 class="headline" id="headline124">Goodies: Git bisect</h3>
 
 <p class="cmdcomment">
 If your project has a bug that you knew wasn't there a year ago,
@@ -2508,7 +2550,7 @@ commit that introduced the bug very quickly, and it can do that
 in an automated way.
 
 </p>
-<pre class="cmdline" id="step122">122# git bisect start</pre>
+<pre class="cmdline" id="step124">124# git bisect start</pre>
 <pre class="cmdoutput">
 status: waiting for both good and bad commits
 </pre>
@@ -2519,7 +2561,7 @@ status: waiting for both good and bad commits
 a known good commit.
 
 </p>
-<pre class="cmdline" id="step123">123# git bisect bad && git bisect good caae1d1</pre>
+<pre class="cmdline" id="step125">125# git bisect bad && git bisect good caae1d1</pre>
 <pre class="cmdoutput">
 status: waiting for good commit(s), bad commit known
 Bisecting: 2 revisions left to test after this (roughly 1 step)
@@ -2532,7 +2574,7 @@ Git now tells you how many revisions are left for testing, and
 how many steps this will take. Test, then mark, as appropriate.
 
 </p>
-<pre class="cmdline" id="step124">124# git bisect bad</pre>
+<pre class="cmdline" id="step126">126# git bisect bad</pre>
 <pre class="cmdoutput">
 Bisecting: 0 revisions left to test after this (roughly 0 steps)
 [0f12049d595ccbd4a5f20e4a84d94118eef2465d] development config
@@ -2542,7 +2584,7 @@ Bisecting: 0 revisions left to test after this (roughly 0 steps)
 etc. etc. - if you cannot test the current commit, you can skip:
 
 </p>
-<pre class="cmdline" id="step125">125# git bisect skip</pre>
+<pre class="cmdline" id="step127">127# git bisect skip</pre>
 <pre class="cmdoutput">
 There are only 'skip'ped commits left to test.
 The first bad commit could be any of:
@@ -2559,7 +2601,7 @@ that broke things if it doesn't have complete information.<br>
 To end the bisect session once you are done, reset:
 
 </p>
-<pre class="cmdline" id="step126">126# git bisect reset</pre>
+<pre class="cmdline" id="step128">128# git bisect reset</pre>
 <pre class="cmdoutput">
 Previous HEAD position was 0f12049 development config
 Switched to branch 'production'
@@ -2588,7 +2630,7 @@ you probably struggle with recurring merge conflicts.
 
 git rerere can help you with that.
 </p>
-<h3 class="headline" id="headline127">Goodies: Git rerere</h3>
+<h3 class="headline" id="headline129">Goodies: Git rerere</h3>
 
 <p class="cmdcomment">
 rerere means "Reuse recorded resolution of conflicted merges".
@@ -2604,7 +2646,7 @@ Let's reset our development branche to the commit with that
 nice long configuration file, and create a new topic branch.
 
 </p>
-<pre class="cmdline" id="step127">127# git remote rm playground && git reset --hard d0bb103 && git branch topic && git checkout topic && tail production.conf</pre>
+<pre class="cmdline" id="step129">129# git remote rm playground && git reset --hard d0bb103 && git branch topic && git checkout topic && tail production.conf</pre>
 <pre class="cmdoutput">
 Switched to branch 'topic'
 HEAD is now at d0bb103 some more conf
@@ -2628,7 +2670,7 @@ in reality...)<br>
 Ok! Now we change some bits in the topic branch.
 
 </p>
-<pre class="cmdline" id="step128">128# sed -i -E 's/config_(..)0=false/config_\10=true/' production.conf && tail -v --l 20 production.conf && git commit -m "changed config" production.conf</pre>
+<pre class="cmdline" id="step130">130# sed -i -E 's/config_(..)0=false/config_\10=true/' production.conf && tail -v --l 20 production.conf && git commit -m "changed config" production.conf</pre>
 <pre class="cmdoutput">
 ==> production.conf &lt;==
 config_181=false
@@ -2659,7 +2701,7 @@ config_200=true
 Say that in the production branch some unrelated fix is made.
 
 </p>
-<pre class="cmdline" id="step129">129# git checkout production && sed -i 's/config_100=false/config_100=file_not_found/' production.conf && git commit -m "fix config_100" production.conf</pre>
+<pre class="cmdline" id="step131">131# git checkout production && sed -i 's/config_100=false/config_100=file_not_found/' production.conf && git commit -m "fix config_100" production.conf</pre>
 <pre class="cmdoutput">
 Switched to branch 'production'
 [production 1fc94bb] fix config_100
@@ -2670,7 +2712,7 @@ Switched to branch 'production'
 Say we keep developing in the topic branch.
 
 </p>
-<pre class="cmdline" id="step130">130# git checkout topic</pre>
+<pre class="cmdline" id="step132">132# git checkout topic</pre>
 <pre class="cmdoutput">
 Switched to branch 'topic'
 </pre>
@@ -2685,7 +2727,7 @@ it's done, we'll roll back, since we don't really want
 that merge in our topic branch).
 
 </p>
-<pre class="cmdline" id="step131">131# git merge production</pre>
+<pre class="cmdline" id="step133">133# git merge production</pre>
 <pre class="cmdoutput">
 Auto-merging production.conf
 CONFLICT (content): Merge conflict in production.conf
@@ -2696,7 +2738,7 @@ Automatic merge failed; fix conflicts and then commit the result.
 This results in a merge conflict.
 
 </p>
-<pre class="cmdline" id="step132">132# git diff</pre>
+<pre class="cmdline" id="step134">134# git diff</pre>
 <pre class="cmdoutput">
 diff --cc production.conf
 index 8654cee,593d505..0000000
@@ -2724,7 +2766,7 @@ that conflict again.<br>
 This is where rerere comes into play. We have to enable it first.
 
 </p>
-<pre class="cmdline" id="step133">133# git config --local rerere.enabled true</pre>
+<pre class="cmdline" id="step135">135# git config --local rerere.enabled true</pre>
 <pre class="cmdoutput">
 </pre>
 
@@ -2734,7 +2776,7 @@ You might want to use --global instead of --local on your machine.
 Now, we roll back and trigger the merge again.
 
 </p>
-<pre class="cmdline" id="step134">134# git merge --abort && git merge production</pre>
+<pre class="cmdline" id="step136">136# git merge --abort && git merge production</pre>
 <pre class="cmdoutput">
 Recorded preimage for 'production.conf'
 Auto-merging production.conf
@@ -2750,7 +2792,7 @@ that's by the rerere functionality.<br>
 Let's fix that conflict now.
 
 </p>
-<pre class="cmdline" id="step135">135# git checkout topic production.conf && sed -i 's/config_100=true/config_100=file_not_found/' production.conf</pre>
+<pre class="cmdline" id="step137">137# git checkout topic production.conf && sed -i 's/config_100=true/config_100=file_not_found/' production.conf</pre>
 <pre class="cmdoutput">
 Updated 1 path from cd06154
 </pre>
@@ -2759,7 +2801,7 @@ Updated 1 path from cd06154
 rerere can tell us about the current state of the resolution:
 
 </p>
-<pre class="cmdline" id="step136">136# git rerere diff</pre>
+<pre class="cmdline" id="step138">138# git rerere diff</pre>
 <pre class="cmdoutput">
 --- a/production.conf
 +++ b/production.conf
@@ -2779,7 +2821,7 @@ rerere can tell us about the current state of the resolution:
 Let's finalize and commit the merge.
 
 </p>
-<pre class="cmdline" id="step137">137# git add production.conf && git commit --no-edit</pre>
+<pre class="cmdline" id="step139">139# git add production.conf && git commit --no-edit</pre>
 <pre class="cmdoutput">
 Recorded resolution for 'production.conf'.
 [topic 47898f3] Merge branch 'production' into topic
@@ -2793,7 +2835,7 @@ If we roll back, then do the merge again, the conflict will get
 resolved by rerere without further manual intervention.
 
 </p>
-<pre class="cmdline" id="step138">138# git reset --hard ddb58ff && git merge --no-edit production</pre>
+<pre class="cmdline" id="step140">140# git reset --hard ddb58ff && git merge --no-edit production</pre>
 <pre class="cmdoutput">
 Resolved 'production.conf' using previous resolution.
 HEAD is now at ddb58ff changed config
@@ -2810,7 +2852,7 @@ i.e., one can add and commit the offending file.<br>
 Conflict resolutions will be used in rebase, too.
 
 </p>
-<pre class="cmdline" id="step139">139# git reset --hard ddb58ff && git rebase production</pre>
+<pre class="cmdline" id="step141">141# git reset --hard ddb58ff && git rebase production</pre>
 <pre class="cmdoutput">
 Rebasing (1/1)error: could not apply ddb58ff... changed config
 hint: Resolve all conflicts manually, mark them as resolved with
@@ -2829,7 +2871,7 @@ CONFLICT (content): Merge conflict in production.conf
 This looks bad, but DON'T PANIC.
 
 </p>
-<pre class="cmdline" id="step140">140# git status</pre>
+<pre class="cmdline" id="step142">142# git status</pre>
 <pre class="cmdoutput">
 interactive rebase in progress; onto 1fc94bb
 Last command done (1 command done):
@@ -2852,7 +2894,7 @@ no changes added to commit (use "git add" and/or "git commit -a")
 This looks fine, doesn't it?
 
 </p>
-<pre class="cmdline" id="step141">141# git diff</pre>
+<pre class="cmdline" id="step143">143# git diff</pre>
 <pre class="cmdoutput">
 diff --cc production.conf
 index 593d505,8654cee..0000000
@@ -2866,7 +2908,7 @@ index 593d505,8654cee..0000000
 the rebase.
 
 </p>
-<pre class="cmdline" id="step142">142# git add production.conf && GIT_EDITOR=true git rebase --continue</pre>
+<pre class="cmdline" id="step144">144# git add production.conf && GIT_EDITOR=true git rebase --continue</pre>
 <pre class="cmdoutput">
 Successfully rebased and updated refs/heads/topic.
 [detached HEAD 02b9030] changed config
@@ -2877,7 +2919,7 @@ Successfully rebased and updated refs/heads/topic.
 Let's look at the diff to production.
 
 </p>
-<pre class="cmdline" id="step143">143# git diff production | head --l 20</pre>
+<pre class="cmdline" id="step145">145# git diff production | head --l 20</pre>
 <pre class="cmdoutput">
 diff --git a/production.conf b/production.conf
 index 593d505..34f7a09 100644
@@ -2905,7 +2947,7 @@ index 593d505..34f7a09 100644
 Such nice diff! Note there's no trace of the conflict.
 
 </p>
-<pre class="cmdline" id="step144">144# git log --pretty=oneline</pre>
+<pre class="cmdline" id="step146">146# git log --pretty=oneline</pre>
 <pre class="cmdoutput">
 02b9030adf3a837f19ad9b635a8c9165ee993c8a changed config
 1fc94bb6c197b00a594f9c9996957ab838867d87 fix config_100
@@ -2931,9 +2973,9 @@ https://git-scm.com/docs/git-rerere<br>
 
 https://git-scm.com/book/en/v2/Git-Tools-Rerere<br>
 </p>
-<h3 class="headline" id="headline145">Thanks</h3>
+<h3 class="headline" id="headline147">Thanks</h3>
 
-<pre class="cmdline" id="step145">145# echo Thanks go to...</pre>
+<pre class="cmdline" id="step147">147# echo Thanks go to...</pre>
 <pre class="cmdoutput">
 Thanks go to...
 </pre>
