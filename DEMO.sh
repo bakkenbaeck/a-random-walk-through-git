@@ -32,7 +32,7 @@ echo "Terms"
 # Ok? Then let's init a Git repository... and have a look at the
 # files in the .git/ folder.
 % .git/ files
-git init . && git config --local user.name "Ijon Tichy" && git config --local user.email "ijon@beteigeuze.space" && rm -rf .git/hooks/ && find .git -type f
+git init --initial-branch=master . && git config --local user.name "Ijon Tichy" && git config --local user.email "ijon@beteigeuze.space" && rm -rf .git/hooks/ && find .git -type f
 # Then, let's commit a README.
 echo "This is not a README yet" > README && git add README && git commit -m "first commit"
 # What files were created by the commit in the .git/ folder?
@@ -685,7 +685,7 @@ git status
 git diff
 # ...and this looks even better, so just add and continue
 # the rebase.
-git add production.conf && git rebase --continue
+git add production.conf && GIT_EDITOR=true git rebase --continue
 # Let's look at the diff to production.
 git diff production | head --l 20
 # Such nice diff! Note there's no trace of the conflict.
@@ -709,7 +709,7 @@ which zlib-flate > /dev/null || { echo "Please install zlib-flate (typically bun
 rm -rf fakeremote > /dev/null 2>&1
 (
 export GIT_COMMITTER_DATE="Jan 1 12:00 2000 +0000" && export GIT_AUTHOR_DATE="Jan 1 12:00 2000 +0000"
-mkdir fakeremote && cd fakeremote && git init --bare -q . && cd ..
+mkdir fakeremote && cd fakeremote && git init --bare --initial-branch=master -q . && cd ..
 git clone ./fakeremote git-playground > /dev/null 2>&1
 cd git-playground && git config --local user.name "Professor Tarantoga" && git config --local user.email "tarantoga@beteigeuze.space"
 touch README && git add README && git commit -q -m 'initial commit' && git push -q && cd .. && rm -rf git-playground

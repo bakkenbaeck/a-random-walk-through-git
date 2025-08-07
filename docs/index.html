@@ -1,5 +1,5 @@
 <html><head><title>A Random Walk Through Git</title><style>.cmdline { background-color: lightgray; margin-top: 36px; } .cmdoutput { background-color: lavender; } pre { white-space: pre-wrap; word-wrap: break-word; text-align: justify; }</style></head>
-<body><h2>A Random Walk Through Git</h2><a href='http://bakkenbaeck.github.io/a-random-walk-through-git'>Website</a> - <a href='https://github.com/bakkenbaeck/a-random-walk-through-git'>on GitHub</a>
+<body><h2>A Random Walk Through Git</h2><a href='https://bakkenbaeck.github.io/a-random-walk-through-git'>Website</a> - <a href='https://github.com/bakkenbaeck/a-random-walk-through-git'>on GitHub</a>
 <ul>
 <li><a href="#headline1">Preface</a></li>
 <li><a href="#headline3">.git/ files</a></li>
@@ -90,13 +90,13 @@ files in the .git/ folder.
 </p>
 <h3 class="headline" id="headline3">.git/ files</h3>
 
-<pre class="cmdline" id="step3">3# git init . && git config --local user.name "Ijon Tichy" && git config --local user.email "ijon@beteigeuze.space" && rm -rf .git/hooks/ && find .git -type f</pre>
+<pre class="cmdline" id="step3">3# git init --initial-branch=master . && git config --local user.name "Ijon Tichy" && git config --local user.email "ijon@beteigeuze.space" && rm -rf .git/hooks/ && find .git -type f</pre>
 <pre class="cmdoutput">
 Initialized empty Git repository in example/.git/
 .git/info/exclude
-.git/config
 .git/description
 .git/HEAD
+.git/config
 </pre>
 
 <p class="cmdcomment">
@@ -105,7 +105,7 @@ Then, let's commit a README.
 </p>
 <pre class="cmdline" id="step4">4# echo "This is not a README yet" > README && git add README && git commit -m "first commit"</pre>
 <pre class="cmdoutput">
-[master (root-commit) 4033e22] first commit
+[master (root-commit) 6ecf002] first commit
  1 file changed, 1 insertion(+)
  create mode 100644 README
 </pre>
@@ -116,19 +116,19 @@ What files were created by the commit in the .git/ folder?
 </p>
 <pre class="cmdline" id="step5">5# find . -type f</pre>
 <pre class="cmdoutput">
-./README
 ./.git/info/exclude
-./.git/refs/heads/master
-./.git/logs/refs/heads/master
-./.git/logs/HEAD
-./.git/config
 ./.git/description
+./.git/refs/heads/master
 ./.git/HEAD
+./.git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59
+./.git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59
+./.git/objects/6e/cf00219d83579a35e3a1daae2615f753c0ec0f
+./.git/config
 ./.git/index
 ./.git/COMMIT_EDITMSG
-./.git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59
-./.git/objects/40/33e22db3df6e826be2ba43f5db16ced4e3bc18
-./.git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59
+./.git/logs/HEAD
+./.git/logs/refs/heads/master
+./README
 </pre>
 
 <p class="cmdcomment">
@@ -139,8 +139,8 @@ What file type do the Git object files use?
 </p>
 <pre class="cmdline" id="step6">6# file .git/objects/*/*</pre>
 <pre class="cmdoutput">
-.git/objects/40/33e22db3df6e826be2ba43f5db16ced4e3bc18: zlib compressed data
 .git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59: zlib compressed data
+.git/objects/6e/cf00219d83579a35e3a1daae2615f753c0ec0f: zlib compressed data
 .git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59: zlib compressed data
 </pre>
 
@@ -152,7 +152,7 @@ More details on these files later.
 </p>
 <pre class="cmdline" id="step7">7# cat .git/refs/heads/master</pre>
 <pre class="cmdoutput">
-4033e22db3df6e826be2ba43f5db16ced4e3bc18
+6ecf00219d83579a35e3a1daae2615f753c0ec0f
 </pre>
 
 <p class="cmdcomment">
@@ -170,7 +170,7 @@ This is a pointer to current HEAD (or a hash when in "detached HEAD" state).
 </p>
 <pre class="cmdline" id="step9">9# cat .git/logs/refs/heads/master</pre>
 <pre class="cmdoutput">
-0000000000000000000000000000000000000000 4033e22db3df6e826be2ba43f5db16ced4e3bc18 Ijon Tichy &lt;ijon@beteigeuze.space> 1620831873 +0200	commit (initial): first commit
+0000000000000000000000000000000000000000 6ecf00219d83579a35e3a1daae2615f753c0ec0f Ijon Tichy &lt;ijon@beteigeuze.space> 1620831874 +0200	commit (initial): first commit
 </pre>
 
 <p class="cmdcomment">
@@ -212,7 +212,7 @@ https://stackoverflow.com/questions/4084921/what-does-the-git-index-contain-exac
 </p>
 <pre class="cmdline" id="step11">11# git log</pre>
 <pre class="cmdoutput">
-commit 4033e22db3df6e826be2ba43f5db16ced4e3bc18
+commit 6ecf00219d83579a35e3a1daae2615f753c0ec0f
 Author: Ijon Tichy &lt;ijon@beteigeuze.space>
 Date:   Wed May 12 17:04:33 2021 +0200
 
@@ -316,7 +316,6 @@ For the purposes if this demo only; don't do this at home.
 </p>
 <pre class="cmdline" id="step18">18# file .git/objects/*/*</pre>
 <pre class="cmdoutput">
-.git/objects/40/33e22db3df6e826be2ba43f5db16ced4e3bc18: zlib compressed data
 .git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59: zlib compressed data
 .git/objects/6e/cf00219d83579a35e3a1daae2615f753c0ec0f: zlib compressed data
 .git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59: zlib compressed data
@@ -333,7 +332,6 @@ That's one tree (we didn't change files so far), one file, three commits (origin
 
 <pre class="cmdline" id="step20">20# file .git/objects/*/*</pre>
 <pre class="cmdoutput">
-.git/objects/40/33e22db3df6e826be2ba43f5db16ced4e3bc18: zlib compressed data
 .git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59: zlib compressed data
 .git/objects/6e/cf00219d83579a35e3a1daae2615f753c0ec0f: zlib compressed data
 .git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59: zlib compressed data
@@ -681,18 +679,17 @@ There's our large file (10000 numbered lines).
 </p>
 <pre class="cmdline" id="step48">48# find .git/objects -type f && du -h --max-depth=0 .git/objects</pre>
 <pre class="cmdoutput">
-.git/objects/c8/d9b9c01eea11fb1032903b0dd2bea3eeb46f48
-.git/objects/53/50fa43e7e3a6263c85e47d24b3351f84be9a22
-.git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59
-.git/objects/98/12045fd898ce41f5a4019dc2c1e4fff5884566
-.git/objects/ce/c918bfb2ed2e03c8add9c9b2f6529cae1216e5
-.git/objects/92/40cdb2b8598f50cb8b66328b5c31d077d14470
-.git/objects/6e/cf00219d83579a35e3a1daae2615f753c0ec0f
-.git/objects/40/33e22db3df6e826be2ba43f5db16ced4e3bc18
-.git/objects/3b/85187168e709784298f3f62ea2aed5f496e5eb
 .git/objects/5b/6c6cb672dc1c3e3f38da4cc819c07da510fb59
+.git/objects/b3/5c99875f5758f64e9348c05dac14848a046f59
+.git/objects/6e/cf00219d83579a35e3a1daae2615f753c0ec0f
+.git/objects/c8/d9b9c01eea11fb1032903b0dd2bea3eeb46f48
+.git/objects/3b/85187168e709784298f3f62ea2aed5f496e5eb
+.git/objects/92/40cdb2b8598f50cb8b66328b5c31d077d14470
+.git/objects/53/50fa43e7e3a6263c85e47d24b3351f84be9a22
+.git/objects/98/12045fd898ce41f5a4019dc2c1e4fff5884566
 .git/objects/55/33519bed1c0129ebd0909a43686f9b735d0e29
-116K	.git/objects
+.git/objects/ce/c918bfb2ed2e03c8add9c9b2f6529cae1216e5
+56K	.git/objects
 </pre>
 
 <p class="cmdcomment">
@@ -730,8 +727,8 @@ Now, let's have a look at the Git internal objects.
 </p>
 <pre class="cmdline" id="step50">50# echo -n "Number of files in objects dir: " && find .git/objects -type f | wc -l && du -h --max-depth=0 .git/objects</pre>
 <pre class="cmdoutput">
-Number of files in objects dir: 311
-3,6M	.git/objects
+Number of files in objects dir: 310
+2,8M	.git/objects
 </pre>
 
 <p class="cmdcomment">
@@ -762,11 +759,16 @@ that are similar.
 </p>
 <pre class="cmdline" id="step52">52# find .git/objects -type f && du -h --max-depth=0 .git/objects</pre>
 <pre class="cmdoutput">
-.git/objects/info/commit-graph
+.git/objects/pack/pack-2807100738f92adc1805fcd25fc20a8a51a97d17.pack
+.git/objects/pack/pack-2807100738f92adc1805fcd25fc20a8a51a97d17.rev
+.git/objects/pack/pack-2807100738f92adc1805fcd25fc20a8a51a97d17.idx
+.git/objects/pack/pack-512fa896d13897b83753e4401f2204d0c4908516.pack
+.git/objects/pack/pack-512fa896d13897b83753e4401f2204d0c4908516.rev
+.git/objects/pack/pack-512fa896d13897b83753e4401f2204d0c4908516.mtimes
+.git/objects/pack/pack-512fa896d13897b83753e4401f2204d0c4908516.idx
 .git/objects/info/packs
-.git/objects/pack/pack-62c19e5f4b4a5a419028bb04ca4b36cd6ee10a63.idx
-.git/objects/pack/pack-62c19e5f4b4a5a419028bb04ca4b36cd6ee10a63.pack
-148K	.git/objects
+.git/objects/info/commit-graph
+156K	.git/objects
 </pre>
 
 <p class="cmdcomment">
@@ -937,8 +939,6 @@ hash only, and might get removed by garbage collection in a while
 4bffad8 HEAD@{1}: commit: detached.txt
 c8d9b9c HEAD@{2}: checkout: moving from master to c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48
 c8d9b9c HEAD@{3}: checkout: moving from packfile_demo to master
-6ecf002 HEAD@{4}: commit (amend): first commit
-4033e22 HEAD@{5}: commit (initial): first commit
 </pre>
 
 <p class="cmdcomment">
@@ -1100,7 +1100,6 @@ Time to dive into remote repositories.
 
 <pre class="cmdline" id="step66">66# ls -1 ../fakeremote</pre>
 <pre class="cmdoutput">
-branches
 config
 description
 HEAD
@@ -1259,10 +1258,10 @@ added.
 </p>
 <pre class="cmdline" id="step74">74# git fetch playground && git branch -a</pre>
 <pre class="cmdoutput">
-warning: no common commits
 From ../fakeremote
  * [new branch]      master     -> playground/master
 * master
+  remotes/playground/HEAD -> playground/master
   remotes/playground/master
 </pre>
 
@@ -1343,8 +1342,8 @@ To ../fakeremote
  ! [rejected]        master -> master (non-fast-forward)
 error: failed to push some refs to '../fakeremote'
 hint: Updates were rejected because the tip of your current branch is behind
-hint: its remote counterpart. Integrate the remote changes (e.g.
-hint: 'git pull ...') before pushing again.
+hint: its remote counterpart. If you want to integrate the remote changes,
+hint: use 'git pull' before pushing again.
 hint: See the 'Note about fast-forwards' in 'git push --help' for details.
 </pre>
 
@@ -1409,7 +1408,7 @@ See git-pull(1) for details.
 
 If you wish to set tracking information for this branch you can do so with:
 
-    git branch --set-upstream-to=<remote>/<branch> master
+    git branch --set-upstream-to=playground/<branch> master
 
 </pre>
 
@@ -1419,7 +1418,7 @@ If you wish to set tracking information for this branch you can do so with:
 </p>
 <pre class="cmdline" id="step82">82# git branch -u playground/master_in_playground</pre>
 <pre class="cmdoutput">
-Branch 'master' set up to track remote branch 'master_in_playground' from 'playground'.
+branch 'master' set up to track 'playground/master_in_playground'.
 </pre>
 
 <p class="cmdcomment">
@@ -1456,7 +1455,7 @@ The tracking info has been added to .git/config...
 </p>
 <pre class="cmdline" id="step84">84# git pull</pre>
 <pre class="cmdoutput">
-Current branch master is up to date.
+Already up to date.
 </pre>
 
 <p class="cmdcomment">
@@ -1521,7 +1520,7 @@ Let's not forget to set up remote tracking.
 </p>
 <pre class="cmdline" id="step88">88# git branch -u playground/master</pre>
 <pre class="cmdoutput">
-Branch 'master' set up to track remote branch 'master' from 'playground'.
+branch 'master' set up to track 'playground/master'.
 </pre>
 
 <p class="cmdcomment">
@@ -1572,7 +1571,7 @@ pushed new commits to the server.
 On branch master
 Your branch and 'playground/master' have diverged,
 and have 1 and 1 different commits each, respectively.
-  (use "git pull" to merge the remote branch into yours)
+  (use "git pull" if you want to integrate the remote branch with yours)
 
 nothing to commit, working tree clean
 </pre>
@@ -1587,10 +1586,10 @@ Time for a bit of visualization, finally.
 </p>
 <pre class="cmdline" id="step92">92# git config --local --add alias.graph "log --graph --all --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)&lt;%an>%Creset' --abbrev-commit --date=relative --date-order" && git graph</pre>
 <pre class="cmdoutput">
-* 40a1d20 - (HEAD -> master) commit_b (21 years ago) &lt;Ijon Tichy>
-| * 21d78fc - (playground/master) commit_a (21 years ago) &lt;Ijon Tichy>
+* 40a1d20 - (HEAD -> master) commit_b (26 years ago) &lt;Ijon Tichy>
+| * 21d78fc - (playground/master, playground/HEAD) commit_a (26 years ago) &lt;Ijon Tichy>
 |/  
-* c8d9b9c - first commit (21 years ago) &lt;Ijon Tichy></pre>
+* c8d9b9c - first commit (26 years ago) &lt;Ijon Tichy></pre>
 
 <p class="cmdcomment">
 Now, what happens if we merge the remote master?<br>
@@ -1610,16 +1609,16 @@ Also, merging creates a bit of a convoluted git history:
 </p>
 <pre class="cmdline" id="step93">93# git merge --no-edit playground/master && git graph</pre>
 <pre class="cmdoutput">
-Merge made by the 'recursive' strategy.
+Merge made by the 'ort' strategy.
  commit_a | 1 +
  1 file changed, 1 insertion(+)
  create mode 100644 commit_a
-*   208e599 - (HEAD -> master) Merge remote-tracking branch 'playground/master' (21 years ago) &lt;Ijon Tichy>
+*   208e599 - (HEAD -> master) Merge remote-tracking branch 'playground/master' (26 years ago) &lt;Ijon Tichy>
 |\  
-* | 40a1d20 - commit_b (21 years ago) &lt;Ijon Tichy>
-| * 21d78fc - (playground/master) commit_a (21 years ago) &lt;Ijon Tichy>
+* | 40a1d20 - commit_b (26 years ago) &lt;Ijon Tichy>
+| * 21d78fc - (playground/master, playground/HEAD) commit_a (26 years ago) &lt;Ijon Tichy>
 |/  
-* c8d9b9c - first commit (21 years ago) &lt;Ijon Tichy></pre>
+* c8d9b9c - first commit (26 years ago) &lt;Ijon Tichy></pre>
 
 <p class="cmdcomment">
 We could push now, but that history is a bit convoluted
@@ -1645,12 +1644,11 @@ Let's reset to commit_b and rebase onto the remote master.
 </p>
 <pre class="cmdline" id="step94">94# git reset --hard 40a1d20 && git rebase playground/master && git graph</pre>
 <pre class="cmdoutput">
+Rebasing (1/1)Successfully rebased and updated refs/heads/master.
 HEAD is now at 40a1d20 commit_b
-First, rewinding head to replay your work on top of it...
-Applying: commit_b
-* 2d78b2c - (HEAD -> master) commit_b (21 years ago) &lt;Ijon Tichy>
-* 21d78fc - (playground/master) commit_a (21 years ago) &lt;Ijon Tichy>
-* c8d9b9c - first commit (21 years ago) &lt;Ijon Tichy></pre>
+* 2d78b2c - (HEAD -> master) commit_b (26 years ago) &lt;Ijon Tichy>
+* 21d78fc - (playground/master, playground/HEAD) commit_a (26 years ago) &lt;Ijon Tichy>
+* c8d9b9c - first commit (26 years ago) &lt;Ijon Tichy></pre>
 
 <p class="cmdcomment">
 Much clearer. Note that the commit hash of our local commit_b has
@@ -1675,9 +1673,9 @@ But that's okay as we can push now without any further complications.
 <pre class="cmdoutput">
 To ../fakeremote
    21d78fc..2d78b2c  master -> master
-* 2d78b2c - (HEAD -> master, playground/master) commit_b (21 years ago) &lt;Ijon Tichy>
-* 21d78fc - commit_a (21 years ago) &lt;Ijon Tichy>
-* c8d9b9c - first commit (21 years ago) &lt;Ijon Tichy></pre>
+* 2d78b2c - (HEAD -> master, playground/master, playground/HEAD) commit_b (26 years ago) &lt;Ijon Tichy>
+* 21d78fc - commit_a (26 years ago) &lt;Ijon Tichy>
+* c8d9b9c - first commit (26 years ago) &lt;Ijon Tichy></pre>
 
 <p class="cmdcomment">
 There.<br>
@@ -1815,7 +1813,7 @@ commits.
 </p>
 <pre class="cmdline" id="step99">99# GIT_SEQUENCE_EDITOR=cat git rebase --interactive c8d9b9c</pre>
 <pre class="cmdoutput">
-[KSuccessfully rebased and updated refs/heads/master.
+Successfully rebased and updated refs/heads/master.
 pick 40a1d20 commit_b
 pick b43bd9c commit_a
 
@@ -1826,16 +1824,22 @@ pick b43bd9c commit_a
 # r, reword &lt;commit> = use commit, but edit the commit message
 # e, edit &lt;commit> = use commit, but stop for amending
 # s, squash &lt;commit> = use commit, but meld into previous commit
-# f, fixup &lt;commit> = like "squash", but discard this commit's log message
+# f, fixup [-C | -c] &lt;commit> = like "squash" but keep only the previous
+#                    commit's log message, unless -C is used, in which case
+#                    keep only this commit's message; -c is same as -C but
+#                    opens the editor
 # x, exec &lt;command> = run command (the rest of the line) using shell
 # b, break = stop here (continue rebase later with 'git rebase --continue')
 # d, drop &lt;commit> = remove commit
 # l, label &lt;label> = label current HEAD with a name
 # t, reset &lt;label> = reset HEAD to a label
 # m, merge [-C &lt;commit> | -c &lt;commit>] &lt;label> [# &lt;oneline>]
-# .       create a merge commit using the original merge commit's
-# .       message (or the oneline, if no original merge commit was
-# .       specified). Use -c &lt;commit> to reword the commit message.
+#         create a merge commit using the original merge commit's
+#         message (or the oneline, if no original merge commit was
+#         specified); use -c &lt;commit> to reword the commit message
+# u, update-ref &lt;ref> = track a placeholder for the &lt;ref> to be updated
+#                       to this position in the new commits. The &lt;ref> is
+#                       updated at the end of the rebase
 #
 # These lines can be re-ordered; they are executed from top to bottom.
 #
@@ -1843,7 +1847,6 @@ pick b43bd9c commit_a
 #
 # However, if you remove everything, the rebase will be aborted.
 #
-# Note that empty commits are commented out
 </pre>
 
 <p class="cmdcomment">
@@ -1871,7 +1874,7 @@ HEAD is now at 2d78b2c commit_b
 </p>
 <pre class="cmdline" id="step101">101# GIT_SEQUENCE_EDITOR="../reverse_file" git rebase --interactive c8d9b9c && git log --pretty=oneline</pre>
 <pre class="cmdoutput">
-Rebasing (1/2)Rebasing (2/2)[KSuccessfully rebased and updated refs/heads/master.
+Rebasing (1/2)Rebasing (2/2)Successfully rebased and updated refs/heads/master.
 b43bd9c7eec7d1d2bb7ac3a3641ff408bace8f5d commit_a
 40a1d20f7a96609e8767ef9c8da9a29d2244fb88 commit_b
 c8d9b9c01eea11fb1032903b0dd2bea3eeb46f48 first commit
@@ -1930,7 +1933,7 @@ previous commit on a rebase --interactive --autosquash.
 </p>
 <pre class="cmdline" id="step104">104# GIT_SEQUENCE_EDITOR=cat git rebase --interactive c8d9b9c --autosquash</pre>
 <pre class="cmdoutput">
-Rebasing (2/3)Rebasing (3/3)[KSuccessfully rebased and updated refs/heads/master.
+Rebasing (2/3)Rebasing (3/3)Successfully rebased and updated refs/heads/master.
 pick 21d78fc commit_a
 fixup a6a7ad1 fixup! commit_a
 pick 2d78b2c commit_b
@@ -1942,16 +1945,22 @@ pick 2d78b2c commit_b
 # r, reword &lt;commit> = use commit, but edit the commit message
 # e, edit &lt;commit> = use commit, but stop for amending
 # s, squash &lt;commit> = use commit, but meld into previous commit
-# f, fixup &lt;commit> = like "squash", but discard this commit's log message
+# f, fixup [-C | -c] &lt;commit> = like "squash" but keep only the previous
+#                    commit's log message, unless -C is used, in which case
+#                    keep only this commit's message; -c is same as -C but
+#                    opens the editor
 # x, exec &lt;command> = run command (the rest of the line) using shell
 # b, break = stop here (continue rebase later with 'git rebase --continue')
 # d, drop &lt;commit> = remove commit
 # l, label &lt;label> = label current HEAD with a name
 # t, reset &lt;label> = reset HEAD to a label
 # m, merge [-C &lt;commit> | -c &lt;commit>] &lt;label> [# &lt;oneline>]
-# .       create a merge commit using the original merge commit's
-# .       message (or the oneline, if no original merge commit was
-# .       specified). Use -c &lt;commit> to reword the commit message.
+#         create a merge commit using the original merge commit's
+#         message (or the oneline, if no original merge commit was
+#         specified); use -c &lt;commit> to reword the commit message
+# u, update-ref &lt;ref> = track a placeholder for the &lt;ref> to be updated
+#                       to this position in the new commits. The &lt;ref> is
+#                       updated at the end of the rebase
 #
 # These lines can be re-ordered; they are executed from top to bottom.
 #
@@ -1959,7 +1968,6 @@ pick 2d78b2c commit_b
 #
 # However, if you remove everything, the rebase will be aborted.
 #
-# Note that empty commits are commented out
 </pre>
 
 <p class="cmdcomment">
@@ -2038,7 +2046,7 @@ Now, let's merge that into production.
 <pre class="cmdline" id="step110">110# git checkout production && git merge --no-edit master</pre>
 <pre class="cmdoutput">
 Switched to branch 'production'
-Merge made by the 'recursive' strategy.
+Merge made by the 'ort' strategy.
  development.conf | 1 +
  hello_world.sh   | 2 ++
  2 files changed, 3 insertions(+)
@@ -2114,13 +2122,13 @@ Let's quickly undo that.
 <pre class="cmdline" id="step113">113# git reset --hard caae1d1 && git graph</pre>
 <pre class="cmdoutput">
 HEAD is now at caae1d1 production config
-* 0a5cb55 - (master) add hello_world.sh (21 years ago) &lt;Ijon Tichy>
-| * caae1d1 - (HEAD -> production) production config (21 years ago) &lt;Ijon Tichy>
-* | 0f12049 - development config (21 years ago) &lt;Ijon Tichy>
+* 0a5cb55 - (master) add hello_world.sh (26 years ago) &lt;Ijon Tichy>
+| * caae1d1 - (HEAD -> production) production config (26 years ago) &lt;Ijon Tichy>
+* | 0f12049 - development config (26 years ago) &lt;Ijon Tichy>
 |/  
-* 2d78b2c - (playground/master) commit_b (21 years ago) &lt;Ijon Tichy>
-* 21d78fc - commit_a (21 years ago) &lt;Ijon Tichy>
-* c8d9b9c - first commit (21 years ago) &lt;Ijon Tichy></pre>
+* 2d78b2c - (playground/master, playground/HEAD) commit_b (26 years ago) &lt;Ijon Tichy>
+* 21d78fc - commit_a (26 years ago) &lt;Ijon Tichy>
+* c8d9b9c - first commit (26 years ago) &lt;Ijon Tichy></pre>
 
 <p class="cmdcomment">
 We have to tell Git to ignore the commit that added the development
@@ -2159,22 +2167,22 @@ Looking good. Now merge the rest of the dev branch.
 </p>
 <pre class="cmdline" id="step115">115# git merge --no-edit master && git graph && echo -e "\n---" && ls -1</pre>
 <pre class="cmdoutput">
-Merge made by the 'recursive' strategy.
+Merge made by the 'ort' strategy.
  hello_world.sh | 2 ++
  1 file changed, 2 insertions(+)
  create mode 100755 hello_world.sh
-*   f695c37 - (HEAD -> production) Merge branch 'master' into production (21 years ago) &lt;Ijon Tichy>
+*   f695c37 - (HEAD -> production) Merge branch 'master' into production (26 years ago) &lt;Ijon Tichy>
 |\  
-* \   ef4c8ba - fake merge: ignore dev config (21 years ago) &lt;Ijon Tichy>
+* \   ef4c8ba - fake merge: ignore dev config (26 years ago) &lt;Ijon Tichy>
 |\ \  
-| | * 0a5cb55 - (master) add hello_world.sh (21 years ago) &lt;Ijon Tichy>
+| | * 0a5cb55 - (master) add hello_world.sh (26 years ago) &lt;Ijon Tichy>
 | |/  
-* | caae1d1 - production config (21 years ago) &lt;Ijon Tichy>
-| * 0f12049 - development config (21 years ago) &lt;Ijon Tichy>
+* | caae1d1 - production config (26 years ago) &lt;Ijon Tichy>
+| * 0f12049 - development config (26 years ago) &lt;Ijon Tichy>
 |/  
-* 2d78b2c - (playground/master) commit_b (21 years ago) &lt;Ijon Tichy>
-* 21d78fc - commit_a (21 years ago) &lt;Ijon Tichy>
-* c8d9b9c - first commit (21 years ago) &lt;Ijon Tichy>
+* 2d78b2c - (playground/master, playground/HEAD) commit_b (26 years ago) &lt;Ijon Tichy>
+* 21d78fc - commit_a (26 years ago) &lt;Ijon Tichy>
+* c8d9b9c - first commit (26 years ago) &lt;Ijon Tichy>
 ---
 commit_a
 commit_b
@@ -2260,7 +2268,7 @@ index cd1dd95..8654cee 100644
  config_101=false
  config_102=false
  config_103=false
-(1/11) Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? @@ -9,7 +9,7 @@ config_106=false
+(1/11) Stage this hunk [y,n,q,a,d,j,J,g,/,e,p,?]? @@ -9,7 +9,7 @@ config_106=false
  config_107=false
  config_108=false
  config_109=false
@@ -2269,7 +2277,7 @@ index cd1dd95..8654cee 100644
  config_111=false
  config_112=false
  config_113=false
-(2/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -19,7 +19,7 @@ config_116=false
+(2/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -19,7 +19,7 @@ config_116=false
  config_117=false
  config_118=false
  config_119=false
@@ -2278,7 +2286,7 @@ index cd1dd95..8654cee 100644
  config_121=false
  config_122=false
  config_123=false
-(3/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -29,7 +29,7 @@ config_126=false
+(3/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -29,7 +29,7 @@ config_126=false
  config_127=false
  config_128=false
  config_129=false
@@ -2287,7 +2295,7 @@ index cd1dd95..8654cee 100644
  config_131=false
  config_132=false
  config_133=false
-(4/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -39,7 +39,7 @@ config_136=false
+(4/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -39,7 +39,7 @@ config_136=false
  config_137=false
  config_138=false
  config_139=false
@@ -2296,7 +2304,7 @@ index cd1dd95..8654cee 100644
  config_141=false
  config_142=false
  config_143=false
-(5/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -49,7 +49,7 @@ config_146=false
+(5/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -49,7 +49,7 @@ config_146=false
  config_147=false
  config_148=false
  config_149=false
@@ -2305,7 +2313,7 @@ index cd1dd95..8654cee 100644
  config_151=false
  config_152=false
  config_153=false
-(6/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -59,7 +59,7 @@ config_156=false
+(6/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -59,7 +59,7 @@ config_156=false
  config_157=false
  config_158=false
  config_159=false
@@ -2314,7 +2322,7 @@ index cd1dd95..8654cee 100644
  config_161=false
  config_162=false
  config_163=false
-(7/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -69,7 +69,7 @@ config_166=false
+(7/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -69,7 +69,7 @@ config_166=false
  config_167=false
  config_168=false
  config_169=false
@@ -2323,7 +2331,7 @@ index cd1dd95..8654cee 100644
  config_171=false
  config_172=false
  config_173=false
-(8/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -79,7 +79,7 @@ config_176=false
+(8/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -79,7 +79,7 @@ config_176=false
  config_177=false
  config_178=false
  config_179=false
@@ -2332,7 +2340,7 @@ index cd1dd95..8654cee 100644
  config_181=false
  config_182=false
  config_183=false
-(9/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -89,7 +89,7 @@ config_186=false
+(9/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -89,7 +89,7 @@ config_186=false
  config_187=false
  config_188=false
  config_189=false
@@ -2341,13 +2349,13 @@ index cd1dd95..8654cee 100644
  config_191=false
  config_192=false
  config_193=false
-(10/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -99,4 +99,4 @@ config_196=false
+(10/11) Stage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -99,4 +99,4 @@ config_196=false
  config_197=false
  config_198=false
  config_199=false
 -config_200=false
 +config_200=true
-(11/11) Stage this hunk [y,n,q,a,d,K,g,/,e,?]? 
+(11/11) Stage this hunk [y,n,q,a,d,K,g,/,e,p,?]? 
 </pre>
 
 <p class="cmdcomment">
@@ -2371,7 +2379,7 @@ index cd1dd95..8654cee 100644
  config_101=false
  config_102=false
  config_103=false
-(1/11) Unstage this hunk [y,n,q,a,d,j,J,g,/,e,?]? @@ -9,7 +9,7 @@ config_106=false
+(1/11) Unstage this hunk [y,n,q,a,d,j,J,g,/,e,p,?]? @@ -9,7 +9,7 @@ config_106=false
  config_107=false
  config_108=false
  config_109=false
@@ -2380,7 +2388,7 @@ index cd1dd95..8654cee 100644
  config_111=false
  config_112=false
  config_113=false
-(2/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -19,7 +19,7 @@ config_116=false
+(2/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -19,7 +19,7 @@ config_116=false
  config_117=false
  config_118=false
  config_119=false
@@ -2389,7 +2397,7 @@ index cd1dd95..8654cee 100644
  config_121=false
  config_122=false
  config_123=false
-(3/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -29,7 +29,7 @@ config_126=false
+(3/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -29,7 +29,7 @@ config_126=false
  config_127=false
  config_128=false
  config_129=false
@@ -2398,7 +2406,7 @@ index cd1dd95..8654cee 100644
  config_131=false
  config_132=false
  config_133=false
-(4/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -39,7 +39,7 @@ config_136=false
+(4/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -39,7 +39,7 @@ config_136=false
  config_137=false
  config_138=false
  config_139=false
@@ -2407,7 +2415,7 @@ index cd1dd95..8654cee 100644
  config_141=false
  config_142=false
  config_143=false
-(5/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -49,7 +49,7 @@ config_146=false
+(5/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -49,7 +49,7 @@ config_146=false
  config_147=false
  config_148=false
  config_149=false
@@ -2416,7 +2424,7 @@ index cd1dd95..8654cee 100644
  config_151=false
  config_152=false
  config_153=false
-(6/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -59,7 +59,7 @@ config_156=false
+(6/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -59,7 +59,7 @@ config_156=false
  config_157=false
  config_158=false
  config_159=false
@@ -2425,7 +2433,7 @@ index cd1dd95..8654cee 100644
  config_161=false
  config_162=false
  config_163=false
-(7/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -69,7 +69,7 @@ config_166=false
+(7/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -69,7 +69,7 @@ config_166=false
  config_167=false
  config_168=false
  config_169=false
@@ -2434,7 +2442,7 @@ index cd1dd95..8654cee 100644
  config_171=false
  config_172=false
  config_173=false
-(8/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -79,7 +79,7 @@ config_176=false
+(8/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -79,7 +79,7 @@ config_176=false
  config_177=false
  config_178=false
  config_179=false
@@ -2443,7 +2451,7 @@ index cd1dd95..8654cee 100644
  config_181=false
  config_182=false
  config_183=false
-(9/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -89,7 +89,7 @@ config_186=false
+(9/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -89,7 +89,7 @@ config_186=false
  config_187=false
  config_188=false
  config_189=false
@@ -2452,13 +2460,13 @@ index cd1dd95..8654cee 100644
  config_191=false
  config_192=false
  config_193=false
-(10/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,?]? @@ -99,4 +99,4 @@ config_196=false
+(10/11) Unstage this hunk [y,n,q,a,d,K,j,J,g,/,e,p,?]? @@ -99,4 +99,4 @@ config_196=false
  config_197=false
  config_198=false
  config_199=false
 -config_200=false
 +config_200=true
-(11/11) Unstage this hunk [y,n,q,a,d,K,g,/,e,?]? 
+(11/11) Unstage this hunk [y,n,q,a,d,K,g,/,e,p,?]? 
 </pre>
 
 <p class="cmdcomment">
@@ -2502,6 +2510,7 @@ in an automated way.
 </p>
 <pre class="cmdline" id="step122">122# git bisect start</pre>
 <pre class="cmdoutput">
+status: waiting for both good and bad commits
 </pre>
 
 <p class="cmdcomment">
@@ -2512,6 +2521,7 @@ a known good commit.
 </p>
 <pre class="cmdline" id="step123">123# git bisect bad && git bisect good caae1d1</pre>
 <pre class="cmdoutput">
+status: waiting for good commit(s), bad commit known
 Bisecting: 2 revisions left to test after this (roughly 1 step)
 [0a5cb5530949f158d2e02f0ca8d6755bf90cce27] add hello_world.sh
 </pre>
@@ -2802,22 +2812,17 @@ Conflict resolutions will be used in rebase, too.
 </p>
 <pre class="cmdline" id="step139">139# git reset --hard ddb58ff && git rebase production</pre>
 <pre class="cmdoutput">
+Rebasing (1/1)error: could not apply ddb58ff... changed config
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
 Resolved 'production.conf' using previous resolution.
-error: Failed to merge in the changes.
-hint: Use 'git am --show-current-patch' to see the failed patch
+Could not apply ddb58ff... changed config
 HEAD is now at ddb58ff changed config
-First, rewinding head to replay your work on top of it...
-Applying: changed config
-Using index info to reconstruct a base tree...
-M	production.conf
-Falling back to patching base and 3-way merge...
 Auto-merging production.conf
 CONFLICT (content): Merge conflict in production.conf
-Patch failed at 0001 changed config
-Resolve all conflicts manually, mark them as resolved with
-"git add/rm &lt;conflicted_files>", then run "git rebase --continue".
-You can instead skip this commit: run "git rebase --skip".
-To abort and get back to the state before "git rebase", run "git rebase --abort".
 </pre>
 
 <p class="cmdcomment">
@@ -2826,7 +2831,10 @@ This looks bad, but DON'T PANIC.
 </p>
 <pre class="cmdline" id="step140">140# git status</pre>
 <pre class="cmdoutput">
-rebase in progress; onto 1fc94bb
+interactive rebase in progress; onto 1fc94bb
+Last command done (1 command done):
+   pick ddb58ff changed config
+No commands remaining.
 You are currently rebasing branch 'topic' on '1fc94bb'.
   (fix conflicts and then run "git rebase --continue")
   (use "git rebase --skip" to skip this patch)
@@ -2858,9 +2866,11 @@ index 593d505,8654cee..0000000
 the rebase.
 
 </p>
-<pre class="cmdline" id="step142">142# git add production.conf && git rebase --continue</pre>
+<pre class="cmdline" id="step142">142# git add production.conf && GIT_EDITOR=true git rebase --continue</pre>
 <pre class="cmdoutput">
-Applying: changed config
+Successfully rebased and updated refs/heads/topic.
+[detached HEAD 02b9030] changed config
+ 1 file changed, 10 insertions(+), 10 deletions(-)
 </pre>
 
 <p class="cmdcomment">
